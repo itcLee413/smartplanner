@@ -1,0 +1,4139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkSmarter - 올인원 생산성 & 텔레그램 스마트 비서</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <!-- ========================================== -->
+    <!-- 1. Notion-Style Left Fixed Sidebar         -->
+    <!-- ========================================== -->
+    <aside class="notion-sidebar" id="appSidebar">
+      <!-- Sidebar Brand -->
+      <div class="sidebar-brand-box d-flex align-items-center justify-content-between">
+        <a href="/" class="navbar-brand-custom text-decoration-none">
+          <i class="bi bi-calendar2-check-fill text-primary"></i>
+          <span>WorkSmarter</span>
+        </a>
+        <button class="btn btn-sm btn-light" type="button" onclick="toggleSidebarCollapse()" title="사이드바 접기/펼치기">
+          <i class="bi bi-list"></i>
+        </button>
+      </div>
+
+      <!-- User Profile Box -->
+      <div class="sidebar-user-box d-flex align-items-center gap-2">
+        <div class="sidebar-avatar">
+          <%= user.name.charAt(0) %>
+        </div>
+        <div class="overflow-hidden">
+          <div class="fw-bold small text-truncate"><%= user.name %></div>
+          <div class="text-muted smaller text-truncate">@<%= user.username %> · <span class="badge bg-light text-secondary border py-0 px-1"><%= user.role %></span></div>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <div class="p-2 flex-grow-1">
+        <div class="sidebar-section-title">개인 워크스페이스</div>
+        <a href="/" class="sidebar-link <%= activeMenu === 'dashboard' ? 'active' : '' %>">
+          <i class="bi bi-speedometer2"></i>
+          <span>내 대시보드</span>
+        </a>
+        <a href="/notes" class="sidebar-link <%= activeMenu === 'notes' ? 'active' : '' %>">
+          <i class="bi bi-file-earmark-text"></i>
+          <span>세부사항 / 문서함</span>
+        </a>
+        <a href="/mypage" class="sidebar-link <%= activeMenu === 'mypage' ? 'active' : '' %>">
+          <i class="bi bi-person-gear"></i>
+          <span>마이페이지</span>
+        </a>
+
+        <div class="sidebar-section-title pt-3">팀 협업 공간</div>
+        <a href="/teams" class="sidebar-link <%= activeMenu === 'teams' ? 'active' : '' %>">
+          <i class="bi bi-people-fill text-primary"></i>
+          <span>팀 워크스페이스</span>
+          <span class="badge bg-primary text-white ms-auto rounded-pill px-2">Team</span>
+        </a>
+
+        <% if (user.role === 'ADMIN') { %>
+          <div class="sidebar-section-title pt-3">시스템 관제</div>
+          <a href="/admin" class="sidebar-link <%= activeMenu === 'admin' ? 'active' : '' %>">
+            <i class="bi bi-shield-lock-fill text-warning"></i>
+            <span>관리자 콘솔</span>
+          </a>
+        <% } %>
+      </div>
+
+      <!-- Sidebar Footer (Logout) -->
+      <div class="sidebar-footer">
+        <a href="/logout" class="btn btn-outline-danger btn-sm w-100 d-flex align-items-center justify-content-center gap-2">
+          <i class="bi bi-box-arrow-right"></i>
+          <span>로그아웃</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Mobile Backdrop -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebarCollapse()"></div>
+
+    <!-- ========================================== -->
+    <!-- 2. Main Content Area                       -->
+    <!-- ========================================== -->
+    <div class="app-main-content">
+      <!-- Top Mobile & Status Bar -->
+      <header class="d-flex align-items-center justify-content-between px-4 py-2 border-bottom bg-white sticky-top">
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button" onclick="toggleSidebarCollapse()" title="사이드바 접기/펼치기">
+            <i class="bi bi-list fs-5"></i>
+          </button>
+          <span class="fw-bold text-dark fs-6 d-flex align-items-center gap-2">
+            <i class="bi bi-speedometer2 text-primary"></i> 내 대시보드
+          </span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" id="btnToggleEditMode" onclick="toggleDashboardEditMode()" title="대시보드 위젯 위치 및 크기 조절">
+            <i class="bi bi-pencil-square"></i>
+            <span id="editModeBtnText">레이아웃 편집 모드</span>
+          </button>
+          <span class="badge bg-light text-dark border px-2 py-1 fw-normal">
+            <i class="bi bi-person-fill text-primary me-1"></i>
+            <strong><%= user.name %></strong> (<%= user.username %>)
+          </span>
+        </div>
+      </header>
+
+      <!-- Global Toast / Alerts -->
+      <div class="container-fluid px-4 mt-3">
+        <% if (errorMsg) { %>
+          <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center py-2 px-3 rounded-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div><%= errorMsg %></div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        <% } %>
+
+        <% if (successMsg) { %>
+          <div class="alert alert-success alert-dismissible fade show d-flex align-items-center py-2 px-3 rounded-3" role="alert">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div><%= successMsg %></div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Main Container -->
+      <main class="container-fluid px-4 py-2 flex-grow-1">
+
+    <% 
+      const layoutMap = {};
+      if (typeof dashboardLayout !== 'undefined' && Array.isArray(dashboardLayout)) {
+        dashboardLayout.forEach(item => { layoutMap[item.id] = item; });
+      }
+      const top3Conf = layoutMap['top3'] || { id: 'top3', x: 0, y: 0, w: 12, h: 3, enabled: true };
+      const workspaceConf = layoutMap['workspace'] || { id: 'workspace', x: 0, y: 3, w: 8, h: 7, enabled: true };
+      const statsConf = layoutMap['stats'] || { id: 'stats', x: 8, y: 3, w: 4, h: 4, enabled: true };
+      const quickAddConf = layoutMap['quick_add'] || { id: 'quick_add', x: 8, y: 7, w: 4, h: 3, enabled: true };
+      const clockConf = layoutMap['clock'] || { id: 'clock', x: 0, y: 10, w: 4, h: 2, enabled: false };
+      const memoConf = layoutMap['memo'] || { id: 'memo', x: 4, y: 10, w: 4, h: 3, enabled: false };
+      const curTop3 = (typeof top3List !== 'undefined' ? top3List : (typeof top3Schedules !== 'undefined' ? top3Schedules : []));
+    %>
+
+    <!-- Modular Dashboard Grid (GridStack v10) -->
+    <div class="grid-stack mb-4" id="dashboardGrid">
+
+      <!-- 1. Top 3 Widget (MIT) -->
+      <% if (top3Conf && top3Conf.enabled !== false) { %>
+      <div class="grid-stack-item" gs-id="top3" gs-x="<%= top3Conf.x %>" gs-y="<%= top3Conf.y %>" gs-w="<%= top3Conf.w %>" gs-h="<%= top3Conf.h %>" data-title="오늘의 핵심 목표 Top 3">
+        <div class="grid-stack-item-content">
+          <div class="card card-custom h-100 top3-container d-flex flex-column" id="top3-dropzone" data-widget-card="top3">
+            <!-- Drag Handle Bar -->
+            <div class="widget-drag-handle">
+              <div class="handle-title">
+                <i class="bi bi-grip-horizontal text-secondary"></i>
+                <i class="bi bi-trophy-fill text-warning ms-1"></i>
+                <span>오늘의 핵심 목표 Top 3</span>
+              </div>
+              <div class="handle-actions d-flex align-items-center gap-2">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill smaller">진행 중: <%= curTop3.length %> / 3</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-pip-toggle" onclick="event.stopPropagation(); togglePipWidget('top3')" title="팝업(PIP) 모드로 분리">
+                  <i class="bi bi-pip"></i> <span class="d-none d-sm-inline ms-1 smaller">팝업 띄우기</span>
+                </button>
+              </div>
+            </div>
+          <div class="card-body p-3 top3-dropzone-body">
+            <% if (!curTop3 || curTop3.length === 0) { %>
+              <div class="text-center py-5 text-muted">
+                <i class="bi bi-stars fs-1 text-secondary opacity-50 mb-2 d-block"></i>
+                <p class="mb-1 fw-semibold">설정된 Top 3 핵심 목표가 없습니다.</p>
+                <p class="small text-secondary mb-0">하단의 개인 일정 또는 소속 팀 일정을 이곳으로 드래그 앤 드롭하여 오늘의 핵심 목표로 등록하세요!</p>
+              </div>
+            <% } else { %>
+              <div class="row g-3">
+                <% curTop3.forEach((sched, idx) => { %>
+                  <div class="col-md-4">
+                    <div class="card card-custom top3-card h-100 p-3 shadow-sm d-flex flex-column justify-content-between"
+                         draggable="true"
+                         data-drag-source="TOP3"
+                         data-drag-type="<%= sched.itemType || 'PERSONAL' %>"
+                         data-drag-id="<%= sched.id %>">
+                      <div>
+                        <!-- Header & Badges -->
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                          <span class="top3-badge">Top <%= idx + 1 %></span>
+                          <div class="d-flex align-items-center gap-1">
+                            <% if (sched.itemType === 'TEAM') { %>
+                              <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace" style="font-size: 0.72rem;">
+                                <%= sched.team_name %>
+                              </span>
+                            <% } else { %>
+                              <span class="badge badge-cat-<%= sched.category %> border"><%= sched.category %></span>
+                            <% } %>
+                            <button type="button" class="btn btn-sm btn-link text-muted p-0 ms-1 top3-remove-btn" 
+                                    onclick="removeTop3Schedule(event, '<%= sched.itemType || 'PERSONAL' %>', <%= sched.id %>)" 
+                                    title="Top 3에서 해제 (바깥으로 끌어서 놓아도 해제됩니다)">
+                              <i class="bi bi-x-lg"></i>
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <!-- Title & Time -->
+                        <h6 class="fw-bold mb-1 text-dark text-truncate" title="<%= sched.title %>"><%= sched.title %></h6>
+                        <div class="small text-muted mb-2">
+                          <% if (sched.due_datetime) { %>
+                            <i class="bi bi-clock me-1"></i><%= sched.due_datetime %>
+                          <% } else { %>
+                            <span class="badge bg-secondary text-white"><i class="bi bi-infinity me-1"></i>상시 일정</span>
+                          <% } %>
+                        </div>
+
+                        <% if (sched.linked_notes && sched.linked_notes.length > 0) { %>
+                          <div class="mb-2 d-flex flex-wrap gap-1">
+                            <% sched.linked_notes.forEach(note => { %>
+                              <a href="/notes?noteId=<%= note.id %>" class="badge bg-light text-primary border text-decoration-none d-inline-flex align-items-center gap-1" title="연결된 문서: <%= note.title %>">
+                                <i class="bi bi-file-earmark-text"></i> <%= note.title %>
+                              </a>
+                            <% }) %>
+                          </div>
+                        <% } %>
+
+                        <!-- Description Preview -->
+                        <% if (sched.description) { %>
+                          <div class="bg-light p-2 rounded small text-secondary preserve-lines mb-2" style="max-height: 80px; overflow-y: auto;">
+                            <%= sched.description %>
+                          </div>
+                        <% } %>
+
+                        <!-- Progress Bar & Subtasks Container -->
+                        <div class="subtasks-container" data-schedule-id="<%= sched.id %>">
+                          <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
+                            <span><%= sched.itemType === 'TEAM' ? '진행 상태' : '체크리스트 진행률' %></span>
+                            <span class="fw-bold text-primary subtask-percent-text"><%= sched.percent %>%</span>
+                          </div>
+                          <div class="progress mb-2" style="height: 6px;">
+                            <div class="progress-bar bg-primary subtask-progress-bar" role="progressbar" style="width: <%= sched.percent %>%;"></div>
+                          </div>
+
+                          <!-- Subtask Checklist List -->
+                          <div class="mb-2" style="max-height: 120px; overflow-y: auto;">
+                            <ul class="subtask-list">
+                              <% if (sched.subtasks && sched.subtasks.length > 0) { %>
+                                <% sched.subtasks.forEach(st => { %>
+                                  <li class="subtask-item <%= st.is_done ? 'done' : '' %>" data-subtask-id="<%= st.id %>">
+                                    <button type="button" class="btn btn-link p-0 text-decoration-none text-dark d-flex align-items-center gap-1 text-start flex-grow-1" style="font-size: 0.82rem;" onclick="toggleSubtaskAsync(event, <%= st.id %>, <%= sched.id %>)">
+                                      <i class="bi <%= st.is_done ? 'bi-check-square-fill text-success' : 'bi-square text-secondary' %>"></i>
+                                      <span class="text-truncate" style="max-width: 150px;"><%= st.title %></span>
+                                    </button>
+                                    <% if (sched.itemType === 'PERSONAL') { %>
+                                      <button type="button" class="subtask-delete-btn" onclick="deleteSubtaskAsync(event, <%= st.id %>, <%= sched.id %>)" title="하위 할 일 삭제">
+                                        <i class="bi bi-x"></i>
+                                      </button>
+                                    <% } %>
+                                  </li>
+                                <% }) %>
+                              <% } %>
+                            </ul>
+                          </div>
+
+                          <% if (sched.itemType === 'PERSONAL') { %>
+                            <!-- Quick Inline Subtask Form -->
+                            <form class="subtask-quick-form mb-2" onsubmit="addSubtaskAsync(event, <%= sched.id %>, this)">
+                              <input type="text" name="title" class="form-control form-control-sm subtask-quick-input" placeholder="세부 할 일 직접 입력..." required>
+                              <button type="submit" class="btn btn-outline-primary btn-sm subtask-quick-btn" title="할 일 추가">추가</button>
+                            </form>
+                          <% } %>
+                        </div>
+                      </div>
+
+                      <!-- Action Buttons -->
+                      <div class="pt-2 border-top mt-2">
+                        <div class="d-flex gap-1 flex-wrap">
+                          <!-- Select for Pomodoro -->
+                          <button type="button" class="btn btn-sm btn-outline-primary flex-fill" onclick="selectPomodoroSchedule('<%= sched.id %>', '<%= sched.title.replace(/'/g, ' ') %>')">
+                            <i class="bi bi-stopwatch"></i> 집중
+                          </button>
+                          <% if (sched.itemType === 'PERSONAL') { %>
+                            <!-- Test Briefing Alert -->
+                            <form action="/telegram/test-alert" method="POST" class="m-0">
+                              <input type="hidden" name="schedule_id" value="<%= sched.id %>">
+                              <button type="submit" class="btn btn-sm btn-outline-info text-dark" title="지금 이 일정 리치 브리핑 텔레그램 발송">
+                                <i class="bi bi-send"></i> 알림
+                              </button>
+                            </form>
+                          <% } else { %>
+                            <a href="/teams?teamId=<%= sched.team_id %>" class="btn btn-sm btn-outline-secondary" title="팀 워크스페이스로 이동">
+                              <i class="bi bi-box-arrow-up-right me-1"></i>팀
+                            </a>
+                          <% } %>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                <% }) %>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- 4. Quick Add Widget -->
+      <% if (quickAddConf && quickAddConf.enabled !== false) { %>
+      <div class="grid-stack-item" gs-id="quick_add" gs-x="<%= quickAddConf.x %>" gs-y="<%= quickAddConf.y %>" gs-w="<%= quickAddConf.w %>" gs-h="<%= quickAddConf.h %>" data-title="새 일정 빠른 등록 폼">
+        <div class="grid-stack-item-content">
+          <div class="card card-custom h-100 d-flex flex-column" id="widget-card-quick_add">
+            <!-- Drag Handle Bar -->
+            <div class="widget-drag-handle">
+              <div class="handle-title">
+                <i class="bi bi-grip-horizontal text-secondary"></i>
+                <i class="bi bi-plus-circle-fill text-success ms-1"></i>
+                <span>새 일정 빠른 등록</span>
+              </div>
+              <div class="handle-actions d-flex align-items-center gap-2">
+                <span class="badge bg-light text-secondary border smaller">Fast Add</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-pip-toggle" onclick="event.stopPropagation(); togglePipWidget('quick_add')" title="팝업(PIP) 모드로 분리">
+                  <i class="bi bi-pip"></i> <span class="d-none d-sm-inline ms-1 smaller">팝업 띄우기</span>
+                </button>
+              </div>
+            </div>
+            <div class="card-body p-3 overflow-y-auto flex-grow-1">
+              <form action="/schedules" method="POST">
+              <div class="mb-2">
+                <label class="form-label small fw-semibold text-secondary mb-1">
+                  <i class="bi bi-folder2-open text-primary me-1"></i>등록 대상 (워크스페이스)
+                </label>
+                <select name="target_workspace" class="form-select form-select-sm">
+                  <option value="personal" selected>개인 일정 (나만 보기)</option>
+                  <% if (typeof myTeams !== 'undefined' && myTeams && myTeams.length > 0) { %>
+                    <optgroup label="소속 팀 워크스페이스">
+                      <% myTeams.forEach(t => { %>
+                        <option value="team_<%= t.id %>">[팀] <%= t.name %> (<%= t.position || '팀원' %>)</option>
+                      <% }); %>
+                    </optgroup>
+                  <% } %>
+                </select>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label small fw-semibold text-secondary mb-1">일정 제목 *</label>
+                <input type="text" name="title" class="form-control form-control-sm" placeholder="예: 프로젝트 보고서 초안 완성" required>
+              </div>
+
+              <div class="mb-2">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <label class="form-label small fw-semibold text-secondary mb-0">마감 날짜 및 시각</label>
+                  <div class="form-check form-check-inline m-0">
+                    <input class="form-check-input" type="checkbox" id="personal_no_deadline" name="no_deadline" onchange="toggleDueInput(this, 'personal_due_datetime')">
+                    <label class="form-check-label smaller text-secondary cursor-pointer" for="personal_no_deadline">기한 없음 (상시 일정)</label>
+                  </div>
+                </div>
+                <input type="datetime-local" id="personal_due_datetime" name="due_datetime" class="form-control form-control-sm" required value="<%= currentKSTDate %>T18:00">
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label small fw-semibold text-secondary mb-1">카테고리</label>
+                <select name="category" class="form-select form-select-sm">
+                  <option value="업무">업무</option>
+                  <option value="개인" selected>개인</option>
+                  <option value="팀프로젝트">팀프로젝트</option>
+                  <option value="자기계발">자기계발</option>
+                </select>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label small fw-semibold text-secondary mb-1">세부 메모 & 진행 순서</label>
+                <textarea name="description" rows="3" class="form-control form-control-sm" placeholder="1. 자료조사&#10;2. 목차 작성&#10;3. 초안 완성"></textarea>
+              </div>
+
+              <div class="form-check form-switch mb-1">
+                <input class="form-check-input" type="checkbox" name="is_top3" id="isTop3Input" value="1">
+                <label class="form-check-label small fw-semibold text-dark" for="isTop3Input">
+                  <i class="bi bi-star-fill text-warning me-1"></i>오늘의 Top 3 핵심 목표로 설정
+                </label>
+              </div>
+
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" name="is_important" id="isImportantInput" value="1" checked>
+                <label class="form-check-label small fw-semibold text-dark" for="isImportantInput">
+                  <i class="bi bi-bell-fill text-danger me-1"></i>중요 일정 (시간 도래 시 텔레그램 알림)
+                </label>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-sm w-100 fw-semibold">
+                <i class="bi bi-calendar-plus me-1"></i> 일정 추가
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- 3. Productivity Stats Widget -->
+    <% if (statsConf && statsConf.enabled !== false) { %>
+    <div class="grid-stack-item" gs-id="stats" gs-x="<%= statsConf.x %>" gs-y="<%= statsConf.y %>" gs-w="<%= statsConf.w %>" gs-h="<%= statsConf.h %>" data-title="카테고리별 생산성 통계 차트">
+      <div class="grid-stack-item-content">
+        <div class="card card-custom h-100 d-flex flex-column" id="widget-card-stats">
+          <!-- Drag Handle Bar -->
+          <div class="widget-drag-handle">
+            <div class="handle-title">
+              <i class="bi bi-grip-horizontal text-secondary"></i>
+              <i class="bi bi-pie-chart-fill text-info ms-1"></i>
+              <span>카테고리별 생산성 통계</span>
+            </div>
+            <div class="handle-actions d-flex align-items-center gap-2">
+              <span class="badge bg-light text-secondary border smaller">Chart.js</span>
+              <button type="button" class="btn btn-sm btn-outline-secondary btn-pip-toggle" onclick="event.stopPropagation(); togglePipWidget('stats')" title="팝업(PIP) 모드로 분리">
+                <i class="bi bi-pip"></i> <span class="d-none d-sm-inline ms-1 smaller">팝업 띄우기</span>
+              </button>
+            </div>
+          </div>
+          <div class="card-body p-3 d-flex flex-column justify-content-between flex-grow-1">
+            <div style="min-height: 170px; height: 180px; position: relative;" class="flex-grow-1">
+              <canvas id="categoryChart"></canvas>
+            </div>
+            <div class="row g-2 mt-2 pt-2 border-top text-center small">
+              <div class="col-4">
+                <div class="bg-light p-1 rounded">
+                  <span class="text-muted d-block">총 일정</span>
+                  <strong id="statTotalCount"><%= stats.totalCount %>개</strong>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="bg-light p-1 rounded">
+                  <span class="text-muted d-block">완료율</span>
+                  <strong id="statCompletionRate" class="text-success"><%= stats.totalCount > 0 ? Math.round((stats.doneCount / stats.totalCount) * 100) : 0 %>%</strong>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="bg-light p-1 rounded">
+                  <span class="text-muted d-block">몰입 시간</span>
+                  <strong id="statFocusMinutes" class="text-primary"><%= stats.totalFocusMinutes %>분</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- 2. Workspace Widget (Kanban / Calendar / Teams) -->
+    <% if (workspaceConf && workspaceConf.enabled !== false) { %>
+    <div class="grid-stack-item" gs-id="workspace" gs-x="<%= workspaceConf.x %>" gs-y="<%= workspaceConf.y %>" gs-w="<%= workspaceConf.w %>" gs-h="<%= workspaceConf.h %>" data-title="일정 워크스페이스">
+      <div class="grid-stack-item-content">
+        <div class="card card-custom h-100 d-flex flex-column" id="widget-card-workspace">
+          <!-- Drag Handle Bar -->
+          <div class="widget-drag-handle">
+            <div class="handle-title">
+              <i class="bi bi-grip-horizontal text-secondary"></i>
+              <i class="bi bi-kanban-fill text-primary ms-1"></i>
+              <span>일정 워크스페이스 (칸반 / 캘린더 / 팀)</span>
+            </div>
+            <div class="handle-actions d-flex align-items-center gap-2">
+              <span class="badge bg-light text-secondary border smaller">Workspace</span>
+              <button type="button" class="btn btn-sm btn-outline-secondary btn-pip-toggle" onclick="event.stopPropagation(); togglePipWidget('workspace')" title="팝업(PIP) 모드로 분리">
+                <i class="bi bi-pip"></i> <span class="d-none d-sm-inline ms-1 smaller">팝업 띄우기</span>
+              </button>
+            </div>
+          </div>
+          <div class="card-header-custom d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <!-- Left: [개인 일정] vs [소속 팀 일정] 전환 탭 -->
+            <ul class="nav nav-pills card-header-pills" id="scopeTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active py-1 px-3 fw-semibold small" id="personal-scope-tab" data-bs-toggle="pill" data-bs-target="#personalScopeView" type="button" role="tab">
+                  <i class="bi bi-person me-1"></i> 개인 일정 (<%= schedules.length %>)
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link py-1 px-3 fw-semibold small" id="team-scope-tab" data-bs-toggle="pill" data-bs-target="#teamScopeView" type="button" role="tab">
+                  <i class="bi bi-people-fill text-primary me-1"></i> 소속 팀 일정 (<%= typeof teamSchedules !== 'undefined' ? teamSchedules.length : 0 %>)
+                </button>
+              </li>
+            </ul>
+
+            <!-- Right: [칸반 보드] vs [월간 캘린더] 탭 (개인 일정 전용) -->
+            <div class="d-flex align-items-center gap-1">
+              <ul class="nav nav-pills card-header-pills" id="workspaceTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active py-1 px-3 fw-semibold small" id="kanban-tab" data-bs-toggle="pill" data-bs-target="#kanbanView" type="button" role="tab" title="3열 칸반 보드">
+                    <i class="bi bi-kanban me-1"></i> 칸반
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link py-1 px-3 fw-semibold small" id="calendar-tab" data-bs-toggle="pill" data-bs-target="#calendarView" type="button" role="tab" onclick="renderCalendar()" title="월간 캘린더">
+                    <i class="bi bi-calendar3 me-1"></i> 캘린더
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="card-body p-3">
+            <div class="tab-content" id="scopeTabContent">
+              <!-- ========================================== -->
+              <!-- SCOPE 1: Personal Schedules (Kanban / Cal) -->
+              <!-- ========================================== -->
+              <div class="tab-pane fade show active" id="personalScopeView" role="tabpanel">
+                <div class="tab-content" id="workspaceTabContent">
+
+              <!-- ========================================== -->
+              <!-- TAB 1: 3-Column Kanban Board                -->
+              <!-- ========================================== -->
+              <div class="tab-pane fade show active" id="kanbanView" role="tabpanel">
+                
+                <!-- Bulk Actions Dynamic Action Bar -->
+                <div id="bulkActionBar" class="bulk-action-bar d-none mb-3 p-3 shadow-sm">
+                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="badge bg-primary fs-6 px-3 py-2">
+                        <i class="bi bi-check2-square me-1"></i><span id="bulkSelectedCount">0</span>개 선택됨
+                      </span>
+                      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearBulkSelection()">
+                        <i class="bi bi-x-circle me-1"></i>선택 해제
+                      </button>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <span class="small fw-semibold text-secondary">상태 일괄 변경:</span>
+                      <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary" onclick="submitBulkStatus('TODO')">
+                          <i class="bi bi-circle me-1"></i>TODO
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="submitBulkStatus('IN_PROGRESS')">
+                          <i class="bi bi-hourglass-split me-1"></i>IN_PROGRESS
+                        </button>
+                        <button type="button" class="btn btn-outline-success" onclick="submitBulkStatus('DONE')">
+                          <i class="bi bi-check-circle-fill me-1"></i>DONE
+                        </button>
+                      </div>
+                      <div class="vr mx-1"></div>
+                      <button type="button" class="btn btn-danger btn-sm fw-semibold" onclick="submitBulkDelete()">
+                        <i class="bi bi-trash-fill me-1"></i>선택 일괄 삭제
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="kanban-board">
+                  
+                  <!-- Column 1: TODO (할 일) -->
+                  <div class="kanban-col kanban-column" data-status="TODO">
+                    <div class="kanban-col-header text-secondary">
+                      <span><i class="bi bi-circle me-1"></i> 할 일 (TODO)</span>
+                      <span class="badge bg-secondary rounded-pill"><%= schedules.filter(s => s.status === 'TODO').length %></span>
+                    </div>
+                    <div class="kanban-cards">
+                      <% schedules.filter(s => s.status === 'TODO').forEach(s => { %>
+                        <div class="kanban-card" 
+                             draggable="true" 
+                             data-drag-source="WORKSPACE" 
+                             data-drag-type="PERSONAL" 
+                             data-drag-id="<%= s.id %>" 
+                             data-current-status="<%= s.status %>"
+                             oncontextmenu="openScheduleContextMenu(event, { id: '<%= s.id %>', title: '<%= s.title.replace(/'/g, "\\'") %>', status: '<%= s.status %>' })">
+                          <div class="d-flex align-items-center justify-content-between mb-1">
+                            <div class="d-flex align-items-center gap-2">
+                              <input type="checkbox" class="form-check-input schedule-select-checkbox m-0" value="<%= s.id %>" onchange="onScheduleCheckboxChange()">
+                              <span class="badge badge-cat-<%= s.category %> border"><%= s.category %></span>
+                            </div>
+                            <div class="dropdown">
+                              <button class="btn btn-link btn-sm text-muted p-0" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots-vertical"></i>
+                              </button>
+                              <ul class="dropdown-menu dropdown-menu-end shadow-sm small">
+                                <li>
+                                  <form action="/schedules/<%= s.id %>/top3" method="POST" class="m-0">
+                                    <button class="dropdown-item" type="submit">
+                                      <i class="bi <%= s.is_top3 ? 'bi-star-fill text-warning' : 'bi-star' %> me-1"></i> Top 3 토글
+                                    </button>
+                                  </form>
+                                </li>
+                                <li>
+                                  <button class="dropdown-item" type="button" onclick="openEditModal('<%= s.id %>', '<%= s.title.replace(/'/g, "\\'") %>', '<%= (s.description || '').replace(/'/g, "\\'").replace(/\n/g, '\\n') %>', '<%= s.due_datetime %>', '<%= s.category %>', '<%= s.is_top3 %>', '<%= s.is_important %>')">
+                                    <i class="bi bi-pencil me-1"></i> 수정
+                                  </button>
+                                </li>
+                                <li>
+                                  <button class="dropdown-item" type="button" onclick="openQuickShareModal('<%= s.id %>', '<%= s.title.replace(/'/g, "\\'") %>')">
+                                    <i class="bi bi-people me-1 text-info"></i> 팀으로 공유
+                                  </button>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                  <form action="/schedules/<%= s.id %>/delete" method="POST" class="m-0" onsubmit="return confirm('이 일정을 삭제하시겠습니까?');">
+                                    <button class="dropdown-item text-danger" type="submit">
+                                      <i class="bi bi-trash me-1"></i> 삭제
+                                    </button>
+                                  </form>
+                                </li>
+                              </ul>
+                            </div>
+                          </div>
+
+                          <h6 class="fw-bold mb-1 text-dark"><%= s.title %></h6>
+                          <div class="small text-muted mb-2">
+                            <% if (s.due_datetime) { %>
+                              <i class="bi bi-clock me-1"></i><%= s.due_datetime %>
+                            <% } else { %>
+                              <span class="badge bg-secondary text-white"><i class="bi bi-infinity me-1"></i>상시 일정</span>
+                            <% } %>
+                            <% if (s.is_important) { %><span class="badge bg-danger-subtle text-danger ms-1">알림</span><% } %>
+                          </div>
+
+                          <% if (s.linked_notes && s.linked_notes.length > 0) { %>
+                            <div class="mb-2 d-flex flex-wrap gap-1">
+                              <% s.linked_notes.forEach(note => { %>
+                                <a href="/notes?noteId=<%= note.id %>" class="badge bg-light text-primary border text-decoration-none d-inline-flex align-items-center gap-1" title="연결된 문서: <%= note.title %>">
+                                  <i class="bi bi-file-earmark-text"></i> <%= note.title %>
+                                </a>
+                              <% }) %>
+                            </div>
+                          <% } %>
+
+                          <% if (s.description) { %>
+                            <p class="small text-secondary preserve-lines bg-light p-2 rounded mb-2"><%= s.description %></p>
+                          <% } %>
+
+                          <!-- Subtasks Summary & Toggle (checklist.md) -->
+                          <div class="mb-2 subtasks-container" data-schedule-id="<%= s.id %>">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                              <span>체크리스트</span>
+                              <span class="subtask-count-text"><%= s.completed_subtasks %>/<%= s.total_subtasks %> (<%= s.percent %>%)</span>
+                            </div>
+                            <div class="progress mb-2" style="height: 4px;">
+                              <div class="progress-bar bg-primary subtask-progress-bar" role="progressbar" style="width: <%= s.percent %>%;"></div>
+                            </div>
+                            <ul class="subtask-list mb-2">
+                              <% (s.subtasks || []).forEach(st => { %>
+                                <li class="subtask-item <%= st.is_done ? 'done' : '' %>" data-subtask-id="<%= st.id %>">
+                                  <button type="button" class="btn btn-link p-0 text-decoration-none text-dark d-flex align-items-center gap-1 text-start flex-grow-1" style="font-size: 0.8rem;" onclick="toggleSubtaskAsync(event, <%= st.id %>, <%= s.id %>)">
+                                    <i class="bi <%= st.is_done ? 'bi-check-square-fill text-success' : 'bi-square text-secondary' %>"></i>
+                                    <span class="text-truncate" style="max-width: 140px;"><%= st.title %></span>
+                                  </button>
+                                  <button type="button" class="subtask-delete-btn" onclick="deleteSubtaskAsync(event, <%= st.id %>, <%= s.id %>)" title="하위 할 일 삭제">
+                                    <i class="bi bi-x"></i>
+                                  </button>
+                                </li>
+                              <% }) %>
+                            </ul>
+                            <!-- Quick Inline Subtask Form -->
+                            <form class="subtask-quick-form mb-2" onsubmit="addSubtaskAsync(event, <%= s.id %>, this)">
+                              <input type="text" name="title" class="form-control form-control-sm subtask-quick-input" placeholder="세부 할 일 직접 입력..." required>
+                              <button type="submit" class="btn btn-outline-primary btn-sm subtask-quick-btn" title="할 일 추가">추가</button>
+                            </form>
+                          </div>
+
+                          <!-- Move Status Button -->
+                          <form action="/schedules/<%= s.id %>/status" method="POST" class="m-0">
+                            <input type="hidden" name="status" value="IN_PROGRESS">
+                            <button type="submit" class="btn btn-outline-primary btn-sm w-100 fw-semibold">
+                              진행 시작 <i class="bi bi-arrow-right"></i>
+                            </button>
+                          </form>
+                        </div>
+                      <% }) %>
+                    </div>
+                  </div>
+
+                  <!-- Column 2: IN_PROGRESS (진행 중) -->
+                  <div class="kanban-col kanban-column" data-status="IN_PROGRESS">
+                    <div class="kanban-col-header text-primary">
+                      <span><i class="bi bi-hourglass-split me-1"></i> 진행 중 (IN_PROGRESS)</span>
+                      <span class="badge bg-primary rounded-pill"><%= schedules.filter(s => s.status === 'IN_PROGRESS').length %></span>
+                    </div>
+                    <div class="kanban-cards">
+                      <% schedules.filter(s => s.status === 'IN_PROGRESS').forEach(s => { %>
+                        <div class="kanban-card border-primary border-opacity-25" 
+                             draggable="true" 
+                             data-drag-source="WORKSPACE" 
+                             data-drag-type="PERSONAL" 
+                             data-drag-id="<%= s.id %>" 
+                             data-current-status="<%= s.status %>"
+                             oncontextmenu="openScheduleContextMenu(event, { id: '<%= s.id %>', title: '<%= s.title.replace(/'/g, "\\'") %>', status: '<%= s.status %>' })">
+                          <div class="d-flex align-items-center justify-content-between mb-1">
+                            <div class="d-flex align-items-center gap-2">
+                              <input type="checkbox" class="form-check-input schedule-select-checkbox m-0" value="<%= s.id %>" onchange="onScheduleCheckboxChange()">
+                              <span class="badge badge-cat-<%= s.category %> border"><%= s.category %></span>
+                            </div>
+                            <div class="dropdown">
+                              <button class="btn btn-link btn-sm text-muted p-0" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots-vertical"></i>
+                              </button>
+                              <ul class="dropdown-menu dropdown-menu-end shadow-sm small">
+                                <li>
+                                  <button class="dropdown-item" type="button" onclick="selectPomodoroSchedule('<%= s.id %>', '<%= s.title.replace(/'/g, " ") %>')">
+                                    <i class="bi bi-stopwatch text-primary me-1"></i> 포모도로 연동
+                                  </button>
+                                </li>
+                                <li>
+                                  <button class="dropdown-item" type="button" onclick="openQuickShareModal('<%= s.id %>', '<%= s.title.replace(/'/g, "\\'") %>')">
+                                    <i class="bi bi-people me-1 text-info"></i> 팀으로 공유
+                                  </button>
+                                </li>
+                                <li>
+                                  <form action="/schedules/<%= s.id %>/status" method="POST" class="m-0">
+                                    <input type="hidden" name="status" value="TODO">
+                                    <button class="dropdown-item" type="submit"><i class="bi bi-arrow-left me-1"></i> TODO로 되돌리기</button>
+                                  </form>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                  <form action="/schedules/<%= s.id %>/delete" method="POST" class="m-0" onsubmit="return confirm('이 일정을 삭제하시겠습니까?');">
+                                    <button class="dropdown-item text-danger" type="submit">
+                                      <i class="bi bi-trash me-1"></i> 삭제
+                                    </button>
+                                  </form>
+                                </li>
+                              </ul>
+                            </div>
+                          </div>
+
+                          <h6 class="fw-bold mb-1 text-dark"><%= s.title %></h6>
+                          <div class="small text-muted mb-2">
+                            <% if (s.due_datetime) { %>
+                              <i class="bi bi-clock me-1"></i><%= s.due_datetime %>
+                            <% } else { %>
+                              <span class="badge bg-secondary text-white"><i class="bi bi-infinity me-1"></i>상시 일정</span>
+                            <% } %>
+                          </div>
+
+                          <% if (s.linked_notes && s.linked_notes.length > 0) { %>
+                            <div class="mb-2 d-flex flex-wrap gap-1">
+                              <% s.linked_notes.forEach(note => { %>
+                                <a href="/notes?noteId=<%= note.id %>" class="badge bg-light text-primary border text-decoration-none d-inline-flex align-items-center gap-1" title="연결된 문서: <%= note.title %>">
+                                  <i class="bi bi-file-earmark-text"></i> <%= note.title %>
+                                </a>
+                              <% }) %>
+                            </div>
+                          <% } %>
+
+                          <% if (s.description) { %>
+                            <p class="small text-secondary preserve-lines bg-light p-2 rounded mb-2"><%= s.description %></p>
+                          <% } %>
+
+                          <!-- Subtasks Summary & Toggle (checklist.md) -->
+                          <div class="mb-2 subtasks-container" data-schedule-id="<%= s.id %>">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                              <span>체크리스트</span>
+                              <span class="subtask-count-text"><%= s.completed_subtasks %>/<%= s.total_subtasks %> (<%= s.percent %>%)</span>
+                            </div>
+                            <div class="progress mb-2" style="height: 4px;">
+                              <div class="progress-bar bg-primary subtask-progress-bar" role="progressbar" style="width: <%= s.percent %>%;"></div>
+                            </div>
+                            <ul class="subtask-list mb-2">
+                              <% (s.subtasks || []).forEach(st => { %>
+                                <li class="subtask-item <%= st.is_done ? 'done' : '' %>" data-subtask-id="<%= st.id %>">
+                                  <button type="button" class="btn btn-link p-0 text-decoration-none text-dark d-flex align-items-center gap-1 text-start flex-grow-1" style="font-size: 0.8rem;" onclick="toggleSubtaskAsync(event, <%= st.id %>, <%= s.id %>)">
+                                    <i class="bi <%= st.is_done ? 'bi-check-square-fill text-success' : 'bi-square text-secondary' %>"></i>
+                                    <span class="text-truncate" style="max-width: 140px;"><%= st.title %></span>
+                                  </button>
+                                  <button type="button" class="subtask-delete-btn" onclick="deleteSubtaskAsync(event, <%= st.id %>, <%= s.id %>)" title="하위 할 일 삭제">
+                                    <i class="bi bi-x"></i>
+                                  </button>
+                                </li>
+                              <% }) %>
+                            </ul>
+                            <!-- Quick Inline Subtask Form -->
+                            <form class="subtask-quick-form mb-2" onsubmit="addSubtaskAsync(event, <%= s.id %>, this)">
+                              <input type="text" name="title" class="form-control form-control-sm subtask-quick-input" placeholder="세부 할 일 직접 입력..." required>
+                              <button type="submit" class="btn btn-outline-primary btn-sm subtask-quick-btn" title="할 일 추가">추가</button>
+                            </form>
+                          </div>
+
+                          <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-outline-primary btn-sm flex-fill" onclick="selectPomodoroSchedule('<%= s.id %>', '<%= s.title.replace(/'/g, " ") %>')">
+                              <i class="bi bi-stopwatch"></i> 집중
+                            </button>
+                            <form action="/schedules/<%= s.id %>/status" method="POST" class="m-0 flex-fill">
+                              <input type="hidden" name="status" value="DONE">
+                              <button type="submit" class="btn btn-success btn-sm w-100 fw-semibold">
+                                <i class="bi bi-check-lg"></i> 완료
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      <% }) %>
+                    </div>
+                  </div>
+
+                  <!-- Column 3: DONE (완료) -->
+                  <div class="kanban-col kanban-column" data-status="DONE">
+                    <div class="kanban-col-header text-success">
+                      <span><i class="bi bi-check-circle-fill me-1"></i> 완료 (DONE)</span>
+                      <span class="badge bg-success rounded-pill"><%= schedules.filter(s => s.status === 'DONE').length %></span>
+                    </div>
+                    <div class="kanban-cards">
+                      <% schedules.filter(s => s.status === 'DONE').forEach(s => { %>
+                        <div class="kanban-card done-card" 
+                             draggable="true" 
+                             data-drag-source="WORKSPACE" 
+                             data-drag-type="PERSONAL" 
+                             data-drag-id="<%= s.id %>" 
+                             data-current-status="<%= s.status %>"
+                             oncontextmenu="openScheduleContextMenu(event, { id: '<%= s.id %>', title: '<%= s.title.replace(/'/g, "\\'") %>', status: '<%= s.status %>' })">
+                          <div class="d-flex align-items-center justify-content-between mb-1">
+                            <div class="d-flex align-items-center gap-2">
+                              <input type="checkbox" class="form-check-input schedule-select-checkbox m-0" value="<%= s.id %>" onchange="onScheduleCheckboxChange()">
+                              <span class="badge bg-light text-muted border"><%= s.category %></span>
+                            </div>
+                            <form action="/schedules/<%= s.id %>/delete" method="POST" class="m-0" onsubmit="return confirm('이 일정을 삭제하시겠습니까?');">
+                              <button class="btn btn-link btn-sm text-danger p-0" type="submit">
+                                <i class="bi bi-trash"></i>
+                              </button>
+                            </form>
+                          </div>
+
+                          <h6 class="fw-bold mb-1 text-decoration-line-through text-muted"><%= s.title %></h6>
+                          <div class="small text-muted mb-2">
+                            <i class="bi bi-check-all text-success me-1"></i>완료됨 (몰입: <%= s.focus_minutes %>분)
+                            <% if (!s.due_datetime) { %><span class="badge bg-secondary text-white ms-1"><i class="bi bi-infinity me-1"></i>상시 일정</span><% } %>
+                          </div>
+
+                          <% if (s.linked_notes && s.linked_notes.length > 0) { %>
+                            <div class="mb-2 d-flex flex-wrap gap-1">
+                              <% s.linked_notes.forEach(note => { %>
+                                <a href="/notes?noteId=<%= note.id %>" class="badge bg-light text-primary border text-decoration-none d-inline-flex align-items-center gap-1" title="연결된 문서: <%= note.title %>">
+                                  <i class="bi bi-file-earmark-text"></i> <%= note.title %>
+                                </a>
+                              <% }) %>
+                            </div>
+                          <% } %>
+
+                          <!-- Subtasks Summary & Toggle (checklist.md) -->
+                          <div class="mb-2 subtasks-container" data-schedule-id="<%= s.id %>">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                              <span>체크리스트</span>
+                              <span class="subtask-count-text"><%= s.completed_subtasks %>/<%= s.total_subtasks %> (<%= s.percent %>%)</span>
+                            </div>
+                            <div class="progress mb-2" style="height: 4px;">
+                              <div class="progress-bar bg-success subtask-progress-bar" role="progressbar" style="width: <%= s.percent %>%;"></div>
+                            </div>
+                            <ul class="subtask-list mb-2">
+                              <% (s.subtasks || []).forEach(st => { %>
+                                <li class="subtask-item <%= st.is_done ? 'done' : '' %>" data-subtask-id="<%= st.id %>">
+                                  <button type="button" class="btn btn-link p-0 text-decoration-none text-dark d-flex align-items-center gap-1 text-start flex-grow-1" style="font-size: 0.8rem;" onclick="toggleSubtaskAsync(event, <%= st.id %>, <%= s.id %>)">
+                                    <i class="bi <%= st.is_done ? 'bi-check-square-fill text-success' : 'bi-square text-secondary' %>"></i>
+                                    <span class="text-truncate" style="max-width: 140px;"><%= st.title %></span>
+                                  </button>
+                                  <button type="button" class="subtask-delete-btn" onclick="deleteSubtaskAsync(event, <%= st.id %>, <%= s.id %>)" title="하위 할 일 삭제">
+                                    <i class="bi bi-x"></i>
+                                  </button>
+                                </li>
+                              <% }) %>
+                            </ul>
+                            <!-- Quick Inline Subtask Form -->
+                            <form class="subtask-quick-form mb-2" onsubmit="addSubtaskAsync(event, <%= s.id %>, this)">
+                              <input type="text" name="title" class="form-control form-control-sm subtask-quick-input" placeholder="세부 할 일 직접 입력..." required>
+                              <button type="submit" class="btn btn-outline-primary btn-sm subtask-quick-btn" title="할 일 추가">추가</button>
+                            </form>
+                          </div>
+
+                          <!-- Restore Button -->
+                          <form action="/schedules/<%= s.id %>/status" method="POST" class="m-0">
+                            <input type="hidden" name="status" value="TODO">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm w-100 py-0" style="font-size: 0.75rem;">
+                              <i class="bi bi-arrow-counterclockwise"></i> TODO로 되돌리기
+                            </button>
+                          </form>
+                        </div>
+                      <% }) %>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- ========================================== -->
+              <!-- TAB 2: Monthly Calendar View               -->
+              <!-- ========================================== -->
+              <div class="tab-pane fade" id="calendarView" role="tabpanel">
+                <!-- 기한 미지정 일정 (상시 일정) 접이식 요약 바 (newdawn.md 1번) -->
+                <% const undatedSchedules = schedules.filter(s => !s.due_datetime); %>
+                <div class="card border mb-3 shadow-sm rounded-3 undated-summary-bar">
+                  <div class="card-header bg-light border-0 px-3 py-2 d-flex align-items-center justify-content-between" 
+                       data-bs-toggle="collapse" 
+                       data-bs-target="#undatedSchedulesCollapse" 
+                       aria-expanded="false" 
+                       style="cursor: pointer;">
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="bi bi-clock-history text-secondary"></i>
+                      <span class="fw-bold small text-dark">
+                        [기한 미지정 일정 (<span id="undatedCountBadge"><%= undatedSchedules.length %></span>건)]
+                      </span>
+                      <span class="badge bg-secondary text-white smaller">상시 일정</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 text-muted small">
+                      <span class="smaller text-muted d-none d-sm-inline">클릭하여 펼치기/접기</span>
+                      <i class="bi bi-chevron-down toggle-collapse-icon"></i>
+                    </div>
+                  </div>
+                  <div class="collapse <%= undatedSchedules.length > 0 ? '' : '' %>" id="undatedSchedulesCollapse">
+                    <div class="card-body p-2 border-top bg-white">
+                      <% if (undatedSchedules.length === 0) { %>
+                        <div class="text-center py-2 text-muted small" id="undatedEmptyNotice">
+                          기한이 지정되지 않은 상시 일정이 없습니다.
+                        </div>
+                      <% } else { %>
+                        <div class="d-flex flex-column gap-2" id="undatedSchedulesList">
+                          <% undatedSchedules.forEach(s => { %>
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded border bg-light flex-wrap gap-2" id="undatedScheduleItem<%= s.id %>">
+                              <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+                                <span class="badge badge-cat-<%= s.category %> border"><%= s.category %></span>
+                                <span class="badge bg-secondary text-white smaller">상시 일정</span>
+                                <span class="fw-semibold small text-truncate <%= s.status === 'DONE' ? 'text-decoration-line-through text-muted' : 'text-dark' %>" title="<%= s.title %>">
+                                  <%= s.title %>
+                                </span>
+                                <% if (s.linked_notes && s.linked_notes.length > 0) { %>
+                                  <% s.linked_notes.forEach(note => { %>
+                                    <a href="/notes?noteId=<%= note.id %>" class="badge bg-white text-primary border text-decoration-none d-inline-flex align-items-center gap-1" title="연결된 문서: <%= note.title %>">
+                                      <i class="bi bi-file-earmark-text"></i> <%= note.title %>
+                                    </a>
+                                  <% }) %>
+                                <% } %>
+                              </div>
+                              <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm py-0 ps-2 pe-4" style="font-size: 0.78rem; width: auto;" onchange="updateUndatedStatus(<%= s.id %>, this.value)">
+                                  <option value="TODO" <%= s.status === 'TODO' ? 'selected' : '' %>>할 일</option>
+                                  <option value="IN_PROGRESS" <%= s.status === 'IN_PROGRESS' ? 'selected' : '' %>>진행 중</option>
+                                  <option value="DONE" <%= s.status === 'DONE' ? 'selected' : '' %>>완료</option>
+                                </select>
+                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="openEditModal('<%= s.id %>', '<%= s.title.replace(/'/g, "\\'") %>', '<%= (s.description || '').replace(/'/g, "\\'").replace(/\n/g, '\\n') %>', '', '<%= s.category %>', '<%= s.is_top3 %>', '<%= s.is_important %>', '<%= s.status %>')" title="일정 수정 및 기한 지정">
+                                  <i class="bi bi-pencil"></i>
+                                </button>
+                              </div>
+                            </div>
+                          <% }) %>
+                        </div>
+                      <% } %>
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                  <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <h6 class="fw-bold mb-0" id="calendarMonthYearTitle">2026년 11월</h6>
+                    <!-- Holiday Country Filter Checkboxes -->
+                    <div class="d-flex align-items-center gap-2 small bg-light px-2 py-1 rounded border">
+                      <span class="text-secondary fw-semibold"><i class="bi bi-flag-fill me-1"></i>공휴일:</span>
+                      <div class="form-check form-check-inline m-0">
+                        <input class="form-check-input holiday-country-check" type="checkbox" id="holidayKR" value="KR" checked onchange="renderCalendar()">
+                        <label class="form-check-label cursor-pointer" for="holidayKR">🇰🇷 한국</label>
+                      </div>
+                      <div class="form-check form-check-inline m-0">
+                        <input class="form-check-input holiday-country-check" type="checkbox" id="holidayJP" value="JP" onchange="renderCalendar()">
+                        <label class="form-check-label cursor-pointer" for="holidayJP">🇯🇵 일본</label>
+                      </div>
+                      <div class="form-check form-check-inline m-0">
+                        <input class="form-check-input holiday-country-check" type="checkbox" id="holidayCN" value="CN" onchange="renderCalendar()">
+                        <label class="form-check-label cursor-pointer" for="holidayCN">🇨🇳 중국</label>
+                      </div>
+                      <div class="form-check form-check-inline m-0">
+                        <input class="form-check-input holiday-country-check" type="checkbox" id="holidayUS" value="US" onchange="renderCalendar()">
+                        <label class="form-check-label cursor-pointer" for="holidayUS">🇺🇸 미국</label>
+                      </div>
+                    </div>
+
+                    <!-- Status Legend (stastics.md) -->
+                    <div class="d-flex align-items-center gap-1 small bg-light px-2 py-1 rounded border">
+                      <span class="text-secondary fw-semibold me-1"><i class="bi bi-circle-fill text-muted" style="font-size: 0.5rem;"></i>상태:</span>
+                      <span class="badge cal-status-TODO border px-2 py-1" style="font-size: 0.72rem;">할 일</span>
+                      <span class="badge cal-status-IN_PROGRESS border px-2 py-1" style="font-size: 0.72rem;">진행 중</span>
+                      <span class="badge cal-status-DONE border px-2 py-1" style="font-size: 0.72rem;">완료</span>
+                    </div>
+                  </div>
+
+                  <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary" onclick="changeMonth(-1)"><i class="bi bi-chevron-left"></i></button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="resetToCurrentMonth()">오늘</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="changeMonth(1)"><i class="bi bi-chevron-right"></i></button>
+                  </div>
+                </div>
+
+                <!-- Calendar Days Header -->
+                <div class="calendar-grid">
+                  <div class="calendar-header-day text-danger">일</div>
+                  <div class="calendar-header-day">월</div>
+                  <div class="calendar-header-day">화</div>
+                  <div class="calendar-header-day">수</div>
+                  <div class="calendar-header-day">목</div>
+                  <div class="calendar-header-day">금</div>
+                  <div class="calendar-header-day text-primary">토</div>
+                </div>
+
+                <!-- Calendar Cells Container -->
+                <div class="calendar-grid" id="calendarCellsContainer">
+                  <!-- Rendered dynamically by JavaScript -->
+                </div>
+              </div>
+
+            </div> <!-- /workspaceTabContent -->
+          </div> <!-- /personalScopeView -->
+
+          <!-- ========================================== -->
+          <!-- SCOPE 2: 소속 팀 전체 일정 3열 칸반 보드      -->
+          <!-- ========================================== -->
+          <div class="tab-pane fade" id="teamScopeView" role="tabpanel">
+            <% if (typeof teamSchedules === 'undefined' || !teamSchedules || teamSchedules.length === 0) { %>
+              <div class="text-center py-5 text-muted">
+                <i class="bi bi-people fs-1 opacity-50 mb-2 d-block"></i>
+                <p class="mb-1 fw-semibold">등록된 소속 팀 일정이 없습니다.</p>
+                <p class="small">좌측 새 일정 등록창에서 소속 팀을 선택하여 일정을 등록하거나, [팀 워크스페이스]로 이동해 보세요.</p>
+                <a href="/teams" class="btn btn-primary btn-sm mt-2">
+                  <i class="bi bi-people-fill me-1"></i> 팀 워크스페이스 이동
+                </a>
+              </div>
+            <% } else { %>
+              <div class="kanban-board">
+                <!-- Column 1: TODO -->
+                <div class="kanban-col kanban-column" data-status="TODO">
+                  <div class="kanban-col-header text-secondary">
+                    <span><i class="bi bi-circle me-1"></i> 할 일 (TODO)</span>
+                    <span class="badge bg-secondary rounded-pill"><%= teamSchedules.filter(s => s.status === 'TODO').length %></span>
+                  </div>
+                  <div class="kanban-cards">
+                    <% teamSchedules.filter(s => s.status === 'TODO').forEach(s => { %>
+                      <div class="kanban-card" 
+                           draggable="true" 
+                           data-drag-source="WORKSPACE" 
+                           data-drag-type="TEAM" 
+                           data-drag-id="<%= s.id %>"
+                           data-team-id="<%= s.team_id %>"
+                           data-current-status="<%= s.status %>">
+                        <div class="team-schedule-card-header mb-1">
+                          <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace team-schedule-badge-team" style="font-size: 0.72rem;">
+                            <%= s.team_name %>
+                          </span>
+                          <span class="badge bg-light text-secondary border small team-schedule-badge-author">
+                            <i class="bi bi-person me-1"></i><%= s.author_name %> (<%= s.author_position || '팀원' %>)
+                          </span>
+                        </div>
+                        <h6 class="fw-bold mb-1 text-dark"><%= s.title %></h6>
+                        <div class="small text-muted mb-2">
+                          <% if (s.due_datetime) { %>
+                            <i class="bi bi-clock me-1"></i><%= s.due_datetime %>
+                          <% } else { %>
+                            <span class="badge bg-secondary text-white"><i class="bi bi-infinity me-1"></i>상시 일정</span>
+                          <% } %>
+                        </div>
+                        <% if (s.linked_notes && s.linked_notes.length > 0) { %>
+                          <div class="mb-2 d-flex flex-wrap gap-1">
+                            <% s.linked_notes.forEach(note => { %>
+                              <a href="/notes?noteId=<%= note.id %>" class="badge bg-light text-primary border text-decoration-none d-inline-flex align-items-center gap-1" title="연결된 문서: <%= note.title %>">
+                                <i class="bi bi-file-earmark-text"></i> <%= note.title %>
+                              </a>
+                            <% }) %>
+                          </div>
+                        <% } %>
+                        <% if (s.description) { %>
+                          <p class="small text-secondary preserve-lines bg-light p-2 rounded mb-2"><%= s.description %></p>
+                        <% } %>
+                        <div class="d-flex align-items-center justify-content-between pt-2 border-top mt-2">
+                          <form class="m-0" onsubmit="return false;">
+                            <select name="status" 
+                                    class="form-select form-select-sm py-0 ps-1 pe-3 team-schedule-status-select" 
+                                    data-team-id="<%= s.team_id %>"
+                                    data-schedule-id="<%= s.id %>"
+                                    data-current-status="TODO"
+                                    onchange="updateTeamScheduleStatus(event, <%= s.team_id %>, <%= s.id %>, this)" 
+                                    style="font-size: 0.75rem; height: 24px;">
+                              <option value="TODO" selected>TODO</option>
+                              <option value="IN_PROGRESS">진행 중</option>
+                              <option value="DONE">완료</option>
+                            </select>
+                          </form>
+                          <a href="/teams?teamId=<%= s.team_id %>" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 0.75rem; height: 24px;">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>팀으로 이동
+                          </a>
+                        </div>
+                      </div>
+                    <% }) %>
+                  </div>
+                </div>
+
+                <!-- Column 2: IN_PROGRESS -->
+                <div class="kanban-col kanban-column" data-status="IN_PROGRESS">
+                  <div class="kanban-col-header text-primary">
+                    <span><i class="bi bi-hourglass-split me-1"></i> 진행 중 (IN_PROGRESS)</span>
+                    <span class="badge bg-primary rounded-pill"><%= teamSchedules.filter(s => s.status === 'IN_PROGRESS').length %></span>
+                  </div>
+                  <div class="kanban-cards">
+                    <% teamSchedules.filter(s => s.status === 'IN_PROGRESS').forEach(s => { %>
+                      <div class="kanban-card border-primary border-opacity-25" 
+                           draggable="true" 
+                           data-drag-source="WORKSPACE" 
+                           data-drag-type="TEAM" 
+                           data-drag-id="<%= s.id %>"
+                           data-team-id="<%= s.team_id %>"
+                           data-current-status="<%= s.status %>">
+                        <div class="team-schedule-card-header mb-1">
+                          <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace team-schedule-badge-team" style="font-size: 0.72rem;">
+                            <%= s.team_name %>
+                          </span>
+                          <span class="badge bg-light text-secondary border small team-schedule-badge-author">
+                            <i class="bi bi-person me-1"></i><%= s.author_name %> (<%= s.author_position || '팀원' %>)
+                          </span>
+                        </div>
+                        <h6 class="fw-bold mb-1 text-dark"><%= s.title %></h6>
+                        <div class="small text-muted mb-2">
+                          <% if (s.due_datetime) { %>
+                            <i class="bi bi-clock me-1"></i><%= s.due_datetime %>
+                          <% } else { %>
+                            <span class="badge bg-secondary text-white"><i class="bi bi-infinity me-1"></i>상시 일정</span>
+                          <% } %>
+                        </div>
+                        <% if (s.linked_notes && s.linked_notes.length > 0) { %>
+                          <div class="mb-2 d-flex flex-wrap gap-1">
+                            <% s.linked_notes.forEach(note => { %>
+                              <a href="/notes?noteId=<%= note.id %>" class="badge bg-light text-primary border text-decoration-none d-inline-flex align-items-center gap-1" title="연결된 문서: <%= note.title %>">
+                                <i class="bi bi-file-earmark-text"></i> <%= note.title %>
+                              </a>
+                            <% }) %>
+                          </div>
+                        <% } %>
+                        <% if (s.description) { %>
+                          <p class="small text-secondary preserve-lines bg-light p-2 rounded mb-2"><%= s.description %></p>
+                        <% } %>
+                        <div class="d-flex align-items-center justify-content-between pt-2 border-top mt-2">
+                          <form class="m-0" onsubmit="return false;">
+                            <select name="status" 
+                                    class="form-select form-select-sm py-0 ps-1 pe-3 team-schedule-status-select" 
+                                    data-team-id="<%= s.team_id %>"
+                                    data-schedule-id="<%= s.id %>"
+                                    data-current-status="IN_PROGRESS"
+                                    onchange="updateTeamScheduleStatus(event, <%= s.team_id %>, <%= s.id %>, this)" 
+                                    style="font-size: 0.75rem; height: 24px;">
+                              <option value="TODO">TODO</option>
+                              <option value="IN_PROGRESS" selected>진행 중</option>
+                              <option value="DONE">완료</option>
+                            </select>
+                          </form>
+                          <a href="/teams?teamId=<%= s.team_id %>" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 0.75rem; height: 24px;">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>팀으로 이동
+                          </a>
+                        </div>
+                      </div>
+                    <% }) %>
+                  </div>
+                </div>
+
+                <!-- Column 3: DONE -->
+                <div class="kanban-col kanban-column" data-status="DONE">
+                  <div class="kanban-col-header text-success">
+                    <span><i class="bi bi-check-circle-fill me-1"></i> 완료 (DONE)</span>
+                    <span class="badge bg-success rounded-pill"><%= teamSchedules.filter(s => s.status === 'DONE').length %></span>
+                  </div>
+                  <div class="kanban-cards">
+                    <% teamSchedules.filter(s => s.status === 'DONE').forEach(s => { %>
+                      <div class="kanban-card done-card" 
+                           draggable="true" 
+                           data-drag-source="WORKSPACE" 
+                           data-drag-type="TEAM" 
+                           data-drag-id="<%= s.id %>"
+                           data-team-id="<%= s.team_id %>"
+                           data-current-status="<%= s.status %>">
+                        <div class="team-schedule-card-header mb-1">
+                          <span class="badge bg-light text-muted border font-monospace team-schedule-badge-team" style="font-size: 0.72rem;">
+                            <%= s.team_name %>
+                          </span>
+                          <span class="badge bg-light text-secondary border small team-schedule-badge-author">
+                            <i class="bi bi-person me-1"></i><%= s.author_name %> (<%= s.author_position || '팀원' %>)
+                          </span>
+                        </div>
+                        <h6 class="fw-bold mb-1 text-decoration-line-through text-muted"><%= s.title %></h6>
+                        <div class="small text-muted mb-2">
+                          <% if (s.due_datetime) { %>
+                            <i class="bi bi-check-all text-success me-1"></i>마감: <%= s.due_datetime %>
+                          <% } else { %>
+                            <span class="badge bg-secondary text-white"><i class="bi bi-infinity me-1"></i>상시 일정</span>
+                          <% } %>
+                        </div>
+                        <% if (s.linked_notes && s.linked_notes.length > 0) { %>
+                          <div class="mb-2 d-flex flex-wrap gap-1">
+                            <% s.linked_notes.forEach(note => { %>
+                              <a href="/notes?noteId=<%= note.id %>" class="badge bg-light text-primary border text-decoration-none d-inline-flex align-items-center gap-1" title="연결된 문서: <%= note.title %>">
+                                <i class="bi bi-file-earmark-text"></i> <%= note.title %>
+                              </a>
+                            <% }) %>
+                          </div>
+                        <% } %>
+                        <div class="d-flex align-items-center justify-content-between pt-2 border-top mt-2">
+                          <form class="m-0" onsubmit="return false;">
+                            <select name="status" 
+                                    class="form-select form-select-sm py-0 ps-1 pe-3 team-schedule-status-select" 
+                                    data-team-id="<%= s.team_id %>"
+                                    data-schedule-id="<%= s.id %>"
+                                    data-current-status="DONE"
+                                    onchange="updateTeamScheduleStatus(event, <%= s.team_id %>, <%= s.id %>, this)" 
+                                    style="font-size: 0.75rem; height: 24px;">
+                              <option value="TODO">TODO</option>
+                              <option value="IN_PROGRESS">진행 중</option>
+                              <option value="DONE" selected>완료</option>
+                            </select>
+                          </form>
+                          <a href="/teams?teamId=<%= s.team_id %>" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 0.75rem; height: 24px;">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>팀으로 이동
+                          </a>
+                        </div>
+                      </div>
+                    <% }) %>
+                  </div>
+                </div>
+              </div>
+            <% } %>
+          </div>
+        </div> <!-- /scopeTabContent -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- 5. Realtime Clock & Date Widget -->
+      <% if (clockConf && clockConf.enabled !== false) { %>
+      <div class="grid-stack-item" gs-id="clock" gs-x="<%= clockConf.x %>" gs-y="<%= clockConf.y %>" gs-w="<%= clockConf.w %>" gs-h="<%= clockConf.h %>" data-title="실시간 디지털 시계 & 오늘의 날짜">
+        <div class="grid-stack-item-content">
+          <div class="card card-custom h-100 d-flex flex-column" id="widget-card-clock">
+            <!-- Drag Handle Bar -->
+            <div class="widget-drag-handle">
+              <div class="handle-title">
+                <i class="bi bi-grip-horizontal text-secondary"></i>
+                <i class="bi bi-clock-fill text-danger ms-1"></i>
+                <span>실시간 시계 & 집중</span>
+              </div>
+              <div class="handle-actions d-flex align-items-center gap-2">
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle smaller">Live</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-pip-toggle" onclick="event.stopPropagation(); togglePipWidget('clock')" title="팝업(PIP) 모드로 분리">
+                  <i class="bi bi-pip"></i> <span class="d-none d-sm-inline ms-1 smaller">팝업 띄우기</span>
+                </button>
+              </div>
+            </div>
+            <div class="card-body p-3 clock-widget-body flex-grow-1">
+              <div id="realtimeClockDisplay" class="clock-time">00:00:00</div>
+              <div id="realtimeDateDisplay" class="clock-date">2026년 11월 17일 화요일</div>
+              <button type="button" class="btn btn-primary btn-sm w-100 fw-semibold shadow-sm" onclick="startClockPomodoro()">
+                <i class="bi bi-play-circle-fill me-1"></i> 25분 집중 바로 시작
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- 6. Quick Post-It Memo Widget -->
+      <% if (memoConf && memoConf.enabled !== false) { %>
+      <div class="grid-stack-item" gs-id="memo" gs-x="<%= memoConf.x %>" gs-y="<%= memoConf.y %>" gs-w="<%= memoConf.w %>" gs-h="<%= memoConf.h %>" data-title="빠른 포스트잇 메모장">
+        <div class="grid-stack-item-content">
+          <div class="card card-custom h-100 d-flex flex-column" id="widget-card-memo">
+            <!-- Drag Handle Bar -->
+            <div class="widget-drag-handle">
+              <div class="handle-title">
+                <i class="bi bi-grip-horizontal text-secondary"></i>
+                <i class="bi bi-sticky-fill text-warning ms-1"></i>
+                <span>빠른 포스트잇 메모장</span>
+              </div>
+              <div class="handle-actions d-flex align-items-center gap-2">
+                <span id="memoSaveStatus" class="badge bg-success-subtle text-success border border-success-subtle smaller">저장됨 ✓</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-pip-toggle" onclick="event.stopPropagation(); togglePipWidget('memo')" title="팝업(PIP) 모드로 분리">
+                  <i class="bi bi-pip"></i> <span class="d-none d-sm-inline ms-1 smaller">팝업 띄우기</span>
+                </button>
+              </div>
+            </div>
+            <div class="card-body p-2 memo-widget-body flex-grow-1">
+              <textarea id="quickMemoTextarea" class="form-control memo-textarea" placeholder="노션처럼 자유롭게 메모를 작성하세요... (입력 멈춘 후 1초 뒤 자동 저장)" oninput="onMemoInput(this)"><%= user.quick_memo || '' %></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- 7. Custom Widgets (moduleplus.md) -->
+      <% if (typeof customWidgets !== 'undefined' && Array.isArray(customWidgets)) { %>
+        <% customWidgets.forEach(cw => { 
+             const customConf = layoutMap['custom_' + cw.id] || { id: 'custom_' + cw.id, x: 0, y: 15, w: cw.default_w || 4, h: cw.default_h || 3, enabled: true };
+             if (customConf.enabled !== false) {
+        %>
+        <div class="grid-stack-item" gs-id="custom_<%= cw.id %>" gs-x="<%= customConf.x %>" gs-y="<%= customConf.y %>" gs-w="<%= customConf.w %>" gs-h="<%= customConf.h %>" data-title="<%= cw.title %>">
+          <div class="grid-stack-item-content">
+            <div class="card card-custom h-100 d-flex flex-column custom-widget-card" id="widget-card-custom_<%= cw.id %>">
+              <!-- Drag Handle Bar -->
+              <div class="widget-drag-handle">
+                <div class="handle-title">
+                  <i class="bi bi-grip-horizontal text-secondary"></i>
+                  <i class="bi bi-puzzle-fill text-primary ms-1"></i>
+                  <span class="widget-title-text"><%= cw.title %></span>
+                </div>
+                <div class="handle-actions d-flex align-items-center gap-2">
+                  <span class="badge bg-light text-secondary border smaller">커스텀</span>
+                  <button type="button" class="btn btn-sm btn-outline-secondary btn-pip-toggle" onclick="event.stopPropagation(); togglePipWidget('custom_<%= cw.id %>')" title="팝업(PIP) 모드로 분리">
+                    <i class="bi bi-pip"></i> <span class="d-none d-sm-inline ms-1 smaller">팝업 띄우기</span>
+                  </button>
+                </div>
+              </div>
+              <!-- Widget Body: iframe with WorkSmarter Common Design System -->
+              <div class="card-body p-0 custom-widget-body flex-grow-1" style="overflow: hidden; height: calc(100% - 36px);">
+                <iframe class="custom-widget-iframe w-100 h-100 border-0" sandbox="allow-scripts" srcdoc="<%= buildCustomWidgetSrcdoc(cw.html_code, cw.css_code, cw.js_code) %>" onload="sendWsContextToIframe(this)"></iframe>
+              </div>
+            </div>
+          </div>
+        </div>
+        <%   } 
+           }); 
+        %>
+      <% } %>
+
+    </div>
+    <!-- /grid-stack -->
+
+    <!-- Floating PIP Container (ploat.md) -->
+    <div id="pipFloatingContainer"></div>
+
+    <!-- ======================================================== -->
+    <!-- SECTION 2: Supplementary Tools (Telegram Assistant & Focus Controls) -->
+    <!-- ======================================================== -->
+    <div class="card card-custom mt-2 mb-4 border-light-subtle">
+      <div class="card-header-custom py-2 px-3 d-flex align-items-center justify-content-between cursor-pointer" data-bs-toggle="collapse" data-bs-target="#supplementarySection" aria-expanded="true">
+        <span class="small fw-bold text-secondary d-flex align-items-center gap-2">
+          <i class="bi bi-sliders text-primary"></i> 텔레그램 스마트 비서 & 포모도로 집중 타이머 상세 설정
+        </span>
+        <i class="bi bi-chevron-down text-muted small toggle-collapse-icon"></i>
+      </div>
+      <div class="collapse show" id="supplementarySection">
+        <div class="card-body p-3">
+          <div class="row g-3">
+            
+            <!-- Left (Col 6): Telegram Smart Assistant & Notification Logs -->
+            <div class="col-lg-6">
+              <!-- Telegram Smart Assistant Widget -->
+              <div class="card card-custom mb-3">
+                <div class="card-header-custom">
+                  <span class="fs-6"><i class="bi bi-telegram text-primary me-1"></i> 텔레그램 스마트 비서</span>
+                  <% if (user.telegram_chat_id) { %>
+                    <span class="badge bg-success">연동 완료</span>
+                  <% } else { %>
+                    <span class="badge bg-warning text-dark">미연동</span>
+                  <% } %>
+                </div>
+                <div class="card-body p-3">
+                  <% if (user.telegram_chat_id) { %>
+                    <!-- Connected State -->
+                    <div class="tg-status-box tg-status-connected mb-3">
+                      <i class="bi bi-check-circle-fill fs-3 text-success"></i>
+                      <div class="small">
+                        <div class="fw-bold">1:1 실시간 연동 활성화</div>
+                        <div class="text-muted">Chat ID: <%= user.telegram_chat_id %></div>
+                      </div>
+                    </div>
+
+                    <!-- Quick Test Briefing -->
+                    <form action="/telegram/test-alert" method="POST" class="mb-2">
+                      <button type="submit" class="btn btn-primary btn-sm w-100 fw-semibold shadow-sm">
+                        <i class="bi bi-send-fill me-1"></i> 즉시 테스트 브리핑 받기
+                      </button>
+                    </form>
+                    <div class="small text-muted text-center mb-3">
+                      중요 일정 알림 포맷이 내 텔레그램으로 즉시 발송됩니다.
+                    </div>
+
+                  <% } else { %>
+                    <!-- Disconnected State -->
+                    <div class="tg-status-box tg-status-disconnected mb-3">
+                      <i class="bi bi-exclamation-circle-fill fs-3 text-warning"></i>
+                      <div class="small">
+                        <div class="fw-bold">텔레그램 미연동 상태</div>
+                        <div>아래 코드를 복사하여 연동하세요.</div>
+                      </div>
+                    </div>
+
+                    <div class="bg-light p-2 rounded text-center mb-3 border">
+                      <span class="text-secondary small d-block mb-1">내 연동 코드</span>
+                      <% if (user.telegram_link_code) { %>
+                        <div class="d-flex align-items-center justify-content-center gap-2">
+                          <span class="fs-4 fw-bold text-primary font-monospace letter-spacing" id="indexTgCodeDisplay">••••••</span>
+                          <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 border-0" id="indexTgToggleBtn" onclick="toggleTgCodeMask('indexTgCodeDisplay', 'indexTgToggleBtn', '<%= user.telegram_link_code %>')" title="연동 코드 표시">
+                            <i class="bi bi-eye"></i>
+                          </button>
+                        </div>
+                      <% } else { %>
+                        <span class="fs-6 fw-bold text-secondary">미발급 (아래 발급 버튼을 눌러주세요)</span>
+                      <% } %>
+                    </div>
+
+                    <form action="/telegram/generate-code" method="POST" class="mb-3">
+                      <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
+                        <i class="bi bi-arrow-repeat me-1"></i> 새 연동 코드 발급
+                      </button>
+                    </form>
+
+                    <!-- Link Guide -->
+                    <div class="p-2 bg-light rounded small text-secondary">
+                      <strong>💡 연동 방법:</strong>
+                      <ol class="ps-3 mb-0 mt-1">
+                        <li>텔레그램 검색창에서 등록된 봇을 찾습니다.</li>
+                        <li><code>/link <%= user.telegram_link_code ? '••••••' : '[연동코드]' %></code> (눈 모양 클릭 후 코드 확인) 입력 후 전송</li>
+                      </ol>
+                    </div>
+                  <% } %>
+
+                  <!-- Telegram Commands Guide -->
+                  <div class="mt-3 pt-2 border-top small text-muted">
+                    <span class="fw-semibold text-dark"><i class="bi bi-terminal me-1"></i>사용 가능한 봇 명령어:</span>
+                    <ul class="ps-3 mb-0 mt-1">
+                      <li><code>/오늘일정</code> : 오늘 일정 브리핑</li>
+                      <li><code>/완료 [ID]</code> : 일정 완료 처리</li>
+                    </ul>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Recent Notification Logs Card -->
+              <div class="card card-custom">
+                <div class="card-header-custom">
+                  <span class="fs-6"><i class="bi bi-clock-history text-secondary me-1"></i> 최근 알림 발송 내역</span>
+                </div>
+                <div class="card-body p-3">
+                  <% if (notificationLogs.length === 0) { %>
+                    <div class="text-center py-4 text-muted small">
+                      알림 발송 내역이 아직 없습니다.
+                    </div>
+                  <% } else { %>
+                    <div>
+                      <% notificationLogs.forEach(log => { %>
+                        <div class="log-item">
+                          <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="badge <%= log.status === 'SUCCESS' ? 'bg-success' : 'bg-danger' %> py-0" style="font-size: 0.7rem;">
+                              <%= log.status === 'SUCCESS' ? '발송 성공' : '실패' %>
+                            </span>
+                            <span class="text-muted" style="font-size: 0.75rem;"><%= log.created_at %></span>
+                          </div>
+                          <div class="text-truncate text-secondary" style="font-size: 0.8rem;" title="<%= log.message %>">
+                            <%= log.message %>
+                          </div>
+                        </div>
+                      <% }) %>
+                    </div>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right (Col 6): Pomodoro Focus Timer Box -->
+            <div class="col-lg-6">
+              <div class="pomodoro-box h-100 d-flex flex-column justify-content-between">
+                <div>
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fw-bold fs-6 d-flex align-items-center gap-2">
+                      <i class="bi bi-fire text-warning"></i> 포모도로 집중 타이머
+                    </span>
+                    <!-- Demo Mode Toggle Button -->
+                    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 small" id="modeToggleBtn" onclick="togglePomodoroMode()">
+                      <i class="bi bi-speedometer2 me-1"></i><span id="modeLabel">1분 시연 모드 전환</span>
+                    </button>
+                  </div>
+
+                  <!-- Active Target Schedule -->
+                  <div class="bg-black bg-opacity-25 p-2 rounded-3 text-start small mb-2 text-truncate">
+                    <span class="text-warning fw-semibold">🎯 집중 목표:</span>
+                    <span id="activeScheduleTitle" class="text-white-50 ms-1">선택된 일정 없음 (자유 집중)</span>
+                    <input type="hidden" id="activeScheduleId" value="<%= (typeof top3List !== 'undefined' && top3List.length > 0) ? top3List[0].id : (typeof top3Schedules !== 'undefined' && top3Schedules.length > 0 ? top3Schedules[0].id : '') %>">
+                  </div>
+
+                  <!-- Digital Timer Display -->
+                  <div class="pomodoro-display" id="timerDisplay">25:00</div>
+                  <div class="text-center small text-white-50 mb-3" id="timerStatusText">준비 완료 • 지금 바로 몰입을 시작하세요</div>
+                </div>
+
+                <!-- Timer Controls -->
+                <div>
+                  <div class="d-flex justify-content-center gap-2 mb-2">
+                    <button type="button" class="btn btn-light btn-timer fw-bold text-dark px-4" id="timerStartBtn" onclick="startTimer()">
+                      <i class="bi bi-play-fill me-1"></i> 시작
+                    </button>
+                    <button type="button" class="btn btn-outline-light btn-timer" id="timerPauseBtn" onclick="pauseTimer()" disabled>
+                      <i class="bi bi-pause-fill me-1"></i> 일시정지
+                    </button>
+                    <button type="button" class="btn btn-outline-light btn-timer" id="timerResetBtn" onclick="resetTimer()">
+                      <i class="bi bi-arrow-counterclockwise me-1"></i> 리셋
+                    </button>
+                  </div>
+
+                  <!-- Pomodoro Alert Sound Controls -->
+                  <div class="mt-3 pt-2 border-top border-white border-opacity-25 text-start">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                      <label for="pomodoroSoundSelect" class="small text-white-50 fw-semibold mb-0">
+                        <i class="bi bi-music-note-beamed me-1"></i>알림 소리 선택
+                      </label>
+                      <button type="button" class="btn btn-link btn-sm text-white-50 p-0 text-decoration-none" onclick="toggleCustomSoundManager()" title="커스텀 오디오 파일 등록 및 관리">
+                        <i class="bi bi-folder-plus me-1"></i><span class="small">커스텀 관리</span>
+                      </button>
+                    </div>
+                    <div class="input-group input-group-sm mb-2">
+                      <select id="pomodoroSoundSelect" class="form-select form-select-sm bg-dark text-white border-secondary" onchange="onSoundSelectionChange()">
+                        <optgroup label="기본 알림음 (Web Audio API)">
+                          <option value="chime">🔔 부드러운 차임벨 (기본)</option>
+                          <option value="alarm">⏰ 경쾌한 디지털 알람</option>
+                          <option value="marimba">🎵 맑은 마림바 벨</option>
+                        </optgroup>
+                        <optgroup label="내 오디오 파일 (최대 3개)" id="customSoundOptgroup">
+                        </optgroup>
+                      </select>
+                      <button type="button" class="btn btn-outline-light btn-sm" id="btnSoundPreview" onclick="previewCurrentSound()" title="미리듣기">
+                        <i class="bi bi-volume-up-fill me-1"></i>미리듣기
+                      </button>
+                    </div>
+
+                    <!-- Custom Sound Manager Panel -->
+                    <div id="customSoundManagerArea" class="bg-black bg-opacity-40 p-2 rounded small text-white-50 d-none mb-2">
+                      <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="fw-semibold text-white">내 오디오 파일 등록 (최대 3개)</span>
+                        <span class="badge bg-secondary" id="customSoundCountBadge">0 / 3</span>
+                      </div>
+                      <div class="input-group input-group-sm mb-2">
+                        <input type="file" id="customAudioFileInput" class="form-control form-control-sm bg-dark text-white border-secondary" accept=".mp3,.wav,audio/mp3,audio/wav,audio/mpeg">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="uploadCustomAudio()">등록</button>
+                      </div>
+                      <div id="customSoundList" class="d-flex flex-column gap-1">
+                        <!-- Dynamically populated from IndexedDB -->
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="text-center small text-white-50">
+                    * 타이머 완료 시 누적 집중 시간이 자동 기록되고 텔레그램으로 완료 브리핑이 발송됩니다.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: Edit Schedule Modal                               -->
+  <!-- ======================================================== -->
+  <div class="modal fade" id="editScheduleModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-1"></i> 일정 수정</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="editScheduleForm" method="POST">
+          <div class="modal-body p-4">
+            <div class="mb-2">
+              <label class="form-label small fw-semibold">일정 제목 *</label>
+              <input type="text" id="editTitle" name="title" class="form-control form-control-sm" required>
+            </div>
+
+            <div class="mb-2">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label small fw-semibold mb-0">마감 날짜 및 시각</label>
+                <div class="form-check form-check-inline m-0">
+                  <input class="form-check-input" type="checkbox" id="editNoDeadline" name="no_deadline" onchange="toggleDueInput(this, 'editDueDateTime')">
+                  <label class="form-check-label smaller text-secondary cursor-pointer" for="editNoDeadline">기한 없음 (상시 일정)</label>
+                </div>
+              </div>
+              <input type="datetime-local" id="editDueDateTime" name="due_datetime" class="form-control form-control-sm">
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label small fw-semibold">카테고리</label>
+              <select id="editCategory" name="category" class="form-select form-select-sm">
+                <option value="업무">업무</option>
+                <option value="개인">개인</option>
+                <option value="팀프로젝트">팀프로젝트</option>
+                <option value="자기계발">자기계발</option>
+              </select>
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label small fw-semibold">진행 상태</label>
+              <select id="editStatus" name="status" class="form-select form-select-sm">
+                <option value="TODO">할 일 (TODO)</option>
+                <option value="IN_PROGRESS">진행 중 (IN_PROGRESS)</option>
+                <option value="DONE">완료 (DONE)</option>
+              </select>
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label small fw-semibold">세부 메모 & 진행 순서</label>
+              <textarea id="editDescription" name="description" rows="3" class="form-control form-control-sm"></textarea>
+            </div>
+
+            <div class="form-check form-switch mb-1">
+              <input class="form-check-input" type="checkbox" name="is_top3" id="editIsTop3" value="1">
+              <label class="form-check-label small fw-semibold" for="editIsTop3">Top 3 핵심 목표</label>
+            </div>
+
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" name="is_important" id="editIsImportant" value="1">
+              <label class="form-check-label small fw-semibold" for="editIsImportant">중요 일정 (텔레그램 알림)</label>
+            </div>
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">취소</button>
+            <button type="submit" class="btn btn-primary btn-sm fw-semibold">저장하기</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client-side Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Schedules Data for Client JavaScript -->
+  <script>
+    // Embedded safe JSON of user teams and schedules
+    window.USER_TEAMS = <%- JSON.stringify(myTeams || []) %>;
+    const userSchedules = [
+      <% schedules.forEach((s, idx) => { %>
+        {
+          id: <%= s.id %>,
+          title: "<%= s.title.replace(/"/g, '\\"') %>",
+          due_datetime: "<%= s.due_datetime || '' %>",
+          category: "<%= s.category %>",
+          status: "<%= s.status %>",
+          is_top3: <%= s.is_top3 %>,
+          is_important: <%= s.is_important %>
+        }<%= idx < schedules.length - 1 ? ',' : '' %>
+      <% }) %>
+    ];
+
+    // ==========================================
+    // 1. Chart.js Category Donut Chart & Refresh (stastics.md)
+    // ==========================================
+    const ctx = document.getElementById('categoryChart');
+    if (ctx) {
+      window.productivityChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['업무', '개인', '팀프로젝트', '자기계발'],
+          datasets: [{
+            data: [
+              <%= stats.categoryStats['업무'] || 0 %>,
+              <%= stats.categoryStats['개인'] || 0 %>,
+              <%= stats.categoryStats['팀프로젝트'] || 0 %>,
+              <%= stats.categoryStats['자기계발'] || 0 %>
+            ],
+            backgroundColor: ['#4f46e5', '#3b82f6', '#f59e0b', '#10b981'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { boxWidth: 12, font: { size: 11 } }
+            }
+          },
+          cutout: '65%'
+        }
+      });
+    }
+
+    function refreshProductivityStats(serverStats) {
+      let stats = serverStats;
+      if (!stats && typeof userSchedules !== 'undefined') {
+        const total = userSchedules.length;
+        const done = userSchedules.filter(s => s.status === 'DONE').length;
+        const todo = userSchedules.filter(s => s.status === 'TODO').length;
+        const inProg = userSchedules.filter(s => s.status === 'IN_PROGRESS').length;
+        const cats = { '업무': 0, '개인': 0, '팀프로젝트': 0, '자기계발': 0 };
+        userSchedules.forEach(s => {
+          if (cats[s.category] !== undefined) cats[s.category]++;
+        });
+        stats = {
+          totalCount: total,
+          doneCount: done,
+          todoCount: todo,
+          inProgressCount: inProg,
+          categoryStats: cats
+        };
+      }
+
+      if (!stats) return;
+
+      // 1. 통계 수치 텍스트 실시간 갱신 (stastics.md 1번)
+      const totalEl = document.getElementById('statTotalCount');
+      if (totalEl) totalEl.textContent = `${stats.totalCount || 0}개`;
+
+      const compEl = document.getElementById('statCompletionRate');
+      if (compEl) {
+        const rate = (stats.totalCount && stats.totalCount > 0)
+          ? Math.round(((stats.doneCount || 0) / stats.totalCount) * 100)
+          : 0;
+        compEl.textContent = `${rate}%`;
+      }
+
+      if (stats.totalFocusMinutes !== undefined) {
+        const focusEl = document.getElementById('statFocusMinutes');
+        if (focusEl) focusEl.textContent = `${stats.totalFocusMinutes}분`;
+      }
+
+      // 2. Chart.js 도넛 차트 그래픽 즉시 부드럽게 갱신 (stastics.md 1번)
+      if (window.productivityChart && stats.categoryStats) {
+        window.productivityChart.data.datasets[0].data = [
+          stats.categoryStats['업무'] || 0,
+          stats.categoryStats['개인'] || 0,
+          stats.categoryStats['팀프로젝트'] || 0,
+          stats.categoryStats['자기계발'] || 0
+        ];
+        window.productivityChart.update();
+      }
+    }
+
+    // ==========================================
+    // 2. Pomodoro Timer Logic & Sound System
+    // ==========================================
+    let isDemoMode = false;
+    let timerTotalSeconds = 25 * 60;
+    let timerRemainingSeconds = 25 * 60;
+    let timerInterval = null;
+    let isRunning = false;
+
+    // Web Audio API AudioContext
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    // Default Sound 1: 부드러운 차임벨 (Soft Chime)
+    function playSoftChime() {
+      try {
+        const ctx = getAudioContext();
+        const chord = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        chord.forEach((freq, idx) => {
+          const startTime = ctx.currentTime + idx * 0.12;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, startTime);
+
+          gain.gain.setValueAtTime(0, startTime);
+          gain.gain.linearRampToValueAtTime(0.25, startTime + 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 1.6);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc.start(startTime);
+          osc.stop(startTime + 1.7);
+        });
+      } catch (err) {
+        console.warn('차임벨 재생 실패:', err);
+      }
+    }
+
+    // Default Sound 2: 경쾌한 디지털 알람 (Lively Digital Alarm)
+    function playDigitalAlarm() {
+      try {
+        const ctx = getAudioContext();
+        const beeps = [
+          { freq: 880, start: 0, dur: 0.12 },
+          { freq: 1174.66, start: 0.15, dur: 0.12 },
+          { freq: 880, start: 0.35, dur: 0.12 },
+          { freq: 1174.66, start: 0.50, dur: 0.18 },
+          { freq: 1396.91, start: 0.72, dur: 0.28 }
+        ];
+        beeps.forEach(b => {
+          const startTime = ctx.currentTime + b.start;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(b.freq, startTime);
+
+          gain.gain.setValueAtTime(0.22, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + b.dur);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc.start(startTime);
+          osc.stop(startTime + b.dur + 0.05);
+        });
+      } catch (err) {
+        console.warn('디지털 알람 재생 실패:', err);
+      }
+    }
+
+    // Default Sound 3: 맑은 마림바 벨 (Clear Marimba Bell)
+    function playMarimbaBell() {
+      try {
+        const ctx = getAudioContext();
+        const notes = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5
+        notes.forEach((freq, idx) => {
+          const startTime = ctx.currentTime + idx * 0.09;
+          
+          // Fundamental
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, startTime);
+
+          gain.gain.setValueAtTime(0, startTime);
+          gain.gain.linearRampToValueAtTime(0.28, startTime + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.85);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(startTime);
+          osc.stop(startTime + 0.9);
+
+          // Wood resonance overtone
+          const overtone = ctx.createOscillator();
+          const overtoneGain = ctx.createGain();
+          overtone.type = 'sine';
+          overtone.frequency.setValueAtTime(freq * 3, startTime);
+
+          overtoneGain.gain.setValueAtTime(0, startTime);
+          overtoneGain.gain.linearRampToValueAtTime(0.09, startTime + 0.004);
+          overtoneGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.22);
+
+          overtone.connect(overtoneGain);
+          overtoneGain.connect(ctx.destination);
+          overtone.start(startTime);
+          overtone.stop(startTime + 0.25);
+        });
+      } catch (err) {
+        console.warn('마림바 벨 재생 실패:', err);
+      }
+    }
+
+    // ------------------------------------------
+    // IndexedDB Custom Audio Storage (Max 3 files)
+    // ------------------------------------------
+    const AUDIO_DB_NAME = 'WebPlannerAudioDB';
+    const AUDIO_STORE_NAME = 'custom_sounds';
+    const AUDIO_DB_VERSION = 1;
+
+    function openAudioDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(AUDIO_DB_NAME, AUDIO_DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(AUDIO_STORE_NAME)) {
+            db.createObjectStore(AUDIO_STORE_NAME, { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function loadCustomSounds() {
+      try {
+        const db = await openAudioDB();
+        const tx = db.transaction(AUDIO_STORE_NAME, 'readonly');
+        const store = tx.objectStore(AUDIO_STORE_NAME);
+        const req = store.getAll();
+
+        req.onsuccess = () => {
+          const sounds = req.result || [];
+          const optgroup = document.getElementById('customSoundOptgroup');
+          const countBadge = document.getElementById('customSoundCountBadge');
+          const listContainer = document.getElementById('customSoundList');
+
+          if (countBadge) countBadge.textContent = `${sounds.length} / 3`;
+          if (optgroup) optgroup.innerHTML = '';
+          if (listContainer) listContainer.innerHTML = '';
+
+          sounds.forEach(sound => {
+            // Add to dropdown
+            if (optgroup) {
+              const opt = document.createElement('option');
+              opt.value = `custom_${sound.id}`;
+              opt.textContent = `📁 ${sound.name}`;
+              optgroup.appendChild(opt);
+            }
+
+            // Add to manage list
+            if (listContainer) {
+              const itemDiv = document.createElement('div');
+              itemDiv.className = 'custom-sound-item';
+              itemDiv.innerHTML = `
+                <span class="text-truncate me-2 text-white" style="max-width: 170px;" title="${sound.name}">
+                  <i class="bi bi-file-earmark-music me-1"></i>${sound.name}
+                </span>
+                <div class="d-flex align-items-center gap-1">
+                  <button type="button" class="btn btn-sm btn-link text-white p-0" onclick="playCustomSoundById(${sound.id})" title="미리듣기">
+                    <i class="bi bi-play-circle"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="deleteCustomAudio(${sound.id})" title="삭제">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              `;
+              listContainer.appendChild(itemDiv);
+            }
+          });
+
+          // Restore saved selection
+          const savedSound = localStorage.getItem('webplanner_pomodoro_sound');
+          const select = document.getElementById('pomodoroSoundSelect');
+          if (select && savedSound) {
+            const hasOption = Array.from(select.options).some(o => o.value === savedSound);
+            if (hasOption) {
+              select.value = savedSound;
+            } else {
+              select.value = 'chime';
+            }
+          }
+        };
+      } catch (err) {
+        console.error('커스텀 오디오 목록 로드 실패:', err);
+      }
+    }
+
+    function onSoundSelectionChange() {
+      const select = document.getElementById('pomodoroSoundSelect');
+      if (select) {
+        localStorage.setItem('webplanner_pomodoro_sound', select.value);
+        if (typeof window.updateMiniTimerSound === 'function') {
+          window.updateMiniTimerSound(select.value);
+        }
+      }
+    }
+
+    function toggleCustomSoundManager() {
+      const area = document.getElementById('customSoundManagerArea');
+      if (area) {
+        area.classList.toggle('d-none');
+      }
+    }
+
+    async function uploadCustomAudio() {
+      const fileInput = document.getElementById('customAudioFileInput');
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        alert('업로드할 오디오 파일(.mp3, .wav)을 선택해 주세요.');
+        return;
+      }
+      const file = fileInput.files[0];
+      const validTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'];
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!validTypes.includes(file.type) && ext !== 'mp3' && ext !== 'wav') {
+        alert('.mp3 또는 .wav 파일만 등록 가능합니다.');
+        return;
+      }
+
+      try {
+        const db = await openAudioDB();
+        const tx = db.transaction(AUDIO_STORE_NAME, 'readonly');
+        const countReq = tx.objectStore(AUDIO_STORE_NAME).count();
+
+        countReq.onsuccess = () => {
+          if (countReq.result >= 3) {
+            alert('커스텀 오디오 파일은 최대 3개까지만 등록할 수 있습니다.\n기존 등록된 파일을 삭제한 후 다시 시도해 주세요.');
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const arrayBuffer = e.target.result;
+            const newSound = {
+              id: Date.now(),
+              name: file.name,
+              type: file.type || (ext === 'wav' ? 'audio/wav' : 'audio/mpeg'),
+              data: arrayBuffer,
+              createdAt: Date.now()
+            };
+
+            const writeTx = db.transaction(AUDIO_STORE_NAME, 'readwrite');
+            writeTx.objectStore(AUDIO_STORE_NAME).add(newSound);
+            writeTx.oncomplete = () => {
+              fileInput.value = '';
+              loadCustomSounds().then(() => {
+                const select = document.getElementById('pomodoroSoundSelect');
+                if (select) {
+                  select.value = `custom_${newSound.id}`;
+                  onSoundSelectionChange();
+                }
+                if (typeof window.loadCustomSoundsIntoMiniTimer === 'function') {
+                  window.loadCustomSoundsIntoMiniTimer();
+                }
+                alert(`오디오 파일 "${file.name}"이(가) 등록되었습니다.`);
+              });
+            };
+          };
+          reader.readAsArrayBuffer(file);
+        };
+      } catch (err) {
+        alert('오디오 파일 저장 중 오류가 발생했습니다: ' + err.message);
+      }
+    }
+
+    async function deleteCustomAudio(id) {
+      const ok = await showConfirm('이 커스텀 알림음을 삭제하시겠습니까?');
+      if (!ok) return;
+      try {
+        const db = await openAudioDB();
+        const tx = db.transaction(AUDIO_STORE_NAME, 'readwrite');
+        tx.objectStore(AUDIO_STORE_NAME).delete(id);
+        tx.oncomplete = () => {
+          const select = document.getElementById('pomodoroSoundSelect');
+          if (select && select.value === `custom_${id}`) {
+            select.value = 'chime';
+            onSoundSelectionChange();
+          }
+          loadCustomSounds();
+          if (typeof window.loadCustomSoundsIntoMiniTimer === 'function') {
+            window.loadCustomSoundsIntoMiniTimer();
+          }
+        };
+      } catch (err) {
+        alert('삭제 중 오류가 발생했습니다: ' + err.message);
+      }
+    }
+
+    async function playCustomSoundById(id) {
+      try {
+        const db = await openAudioDB();
+        const tx = db.transaction(AUDIO_STORE_NAME, 'readonly');
+        const req = tx.objectStore(AUDIO_STORE_NAME).get(id);
+        req.onsuccess = () => {
+          const record = req.result;
+          if (record && record.data) {
+            const blob = new Blob([record.data], { type: record.type || 'audio/mpeg' });
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            audio.play().catch(e => {
+              console.warn('커스텀 오디오 재생 실패, 기본 알림음으로 대체:', e);
+              playSoftChime();
+            });
+          } else {
+            playSoftChime();
+          }
+        };
+      } catch (err) {
+        playSoftChime();
+      }
+    }
+
+    async function playCurrentPomodoroSound() {
+      const select = document.getElementById('pomodoroSoundSelect');
+      const soundVal = select ? select.value : 'chime';
+
+      if (soundVal === 'chime') {
+        playSoftChime();
+      } else if (soundVal === 'alarm') {
+        playDigitalAlarm();
+      } else if (soundVal === 'marimba') {
+        playMarimbaBell();
+      } else if (soundVal && soundVal.startsWith('custom_')) {
+        const customId = parseInt(soundVal.replace('custom_', ''), 10);
+        await playCustomSoundById(customId);
+      } else {
+        playSoftChime();
+      }
+    }
+
+    function previewCurrentSound() {
+      getAudioContext(); // Ensure context is active on click
+      playCurrentPomodoroSound();
+    }
+
+    // Initialize custom sounds, calendar, pomodoro sync, gridstack, clock & PIP on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCustomSounds();
+      renderCalendar();
+      initDashboardPomodoro();
+      initGridStackDashboard();
+      initClockWidget();
+      restoreSavedPipWindows();
+    });
+
+    // ==========================================
+    // Modular Dashboard System Logic (modules.md)
+    // ==========================================
+    let dashboardGrid = null;
+    let isDashboardEditMode = false;
+
+    function initGridStackDashboard() {
+      const gridEl = document.getElementById('dashboardGrid');
+      if (!gridEl || typeof GridStack === 'undefined') return;
+
+      dashboardGrid = GridStack.init({
+        column: 12,
+        cellHeight: 85,
+        animate: true,
+        margin: 10,
+        handle: '.widget-drag-handle',
+        staticGrid: true // default locked mode
+      }, gridEl);
+
+      // Listen to change event (drag or resize)
+      dashboardGrid.on('change', function(event, items) {
+        saveDashboardLayoutChange();
+        if (window.productivityChart && typeof window.productivityChart.resize === 'function') {
+          try { window.productivityChart.resize(); } catch (e) {}
+        }
+      });
+
+      dashboardGrid.on('resizestop', function(event, el) {
+        if (window.productivityChart && typeof window.productivityChart.resize === 'function') {
+          try { window.productivityChart.resize(); } catch (e) {}
+        }
+      });
+    }
+
+    function toggleDashboardEditMode() {
+      if (!dashboardGrid) return;
+      isDashboardEditMode = !isDashboardEditMode;
+      dashboardGrid.setStatic(!isDashboardEditMode);
+
+      const gridEl = document.getElementById('dashboardGrid');
+      const btn = document.getElementById('btnToggleEditMode');
+
+      if (isDashboardEditMode) {
+        if (gridEl) gridEl.classList.add('dashboard-edit-mode');
+        if (btn) {
+          btn.classList.replace('btn-outline-secondary', 'btn-primary');
+          btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i><span id="editModeBtnText">편집 완료 (잠금)</span>';
+        }
+      } else {
+        if (gridEl) gridEl.classList.remove('dashboard-edit-mode');
+        if (btn) {
+          btn.classList.replace('btn-primary', 'btn-outline-secondary');
+          btn.innerHTML = '<i class="bi bi-pencil-square me-1"></i><span id="editModeBtnText">레이아웃 편집 모드</span>';
+        }
+      }
+    }
+
+    let layoutSaveDebounce = null;
+    function saveDashboardLayoutChange() {
+      clearTimeout(layoutSaveDebounce);
+      layoutSaveDebounce = setTimeout(async () => {
+        if (!dashboardGrid) return;
+        try {
+          const serialized = dashboardGrid.save(false);
+          const layoutData = serialized.map(item => ({
+            id: item.id,
+            x: item.x,
+            y: item.y,
+            w: item.w,
+            h: item.h
+          }));
+          await fetch('/api/dashboard/layout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ layout: layoutData })
+          });
+        } catch (err) {
+          console.error('Failed to auto-save dashboard layout:', err);
+        }
+      }, 400);
+    }
+
+    // Clock Widget Logic
+    function initClockWidget() {
+      function updateClock() {
+        const timeEl = document.getElementById('realtimeClockDisplay');
+        const dateEl = document.getElementById('realtimeDateDisplay');
+        if (!timeEl || !dateEl) return;
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2, '0');
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
+        timeEl.textContent = `${h}:${m}:${s}`;
+
+        const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+        dateEl.textContent = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일 ${days[now.getDay()]}`;
+      }
+      setInterval(updateClock, 1000);
+      updateClock();
+    }
+
+    function startClockPomodoro() {
+      if (typeof window.startGlobalPomodoro === 'function') {
+        window.startGlobalPomodoro(null, '일반 집중 세션', 25);
+      } else if (typeof startTimer === 'function') {
+        startTimer();
+      }
+    }
+
+    // Memo Widget Debounced Auto-save
+    let memoDebounceTimer = null;
+    function onMemoInput(textarea) {
+      const statusEl = document.getElementById('memoSaveStatus');
+      if (statusEl) {
+        statusEl.textContent = '입력 중...';
+        statusEl.className = 'badge bg-warning-subtle text-warning border border-warning-subtle smaller';
+      }
+      clearTimeout(memoDebounceTimer);
+      memoDebounceTimer = setTimeout(async () => {
+        if (statusEl) {
+          statusEl.textContent = '저장 중...';
+          statusEl.className = 'badge bg-info-subtle text-info border border-info-subtle smaller';
+        }
+        try {
+          const res = await fetch('/api/dashboard/memo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ memo: textarea.value })
+          });
+          const data = await res.json();
+          if (data.success) {
+            if (statusEl) {
+              statusEl.textContent = '저장됨 ✓';
+              statusEl.className = 'badge bg-success-subtle text-success border border-success-subtle smaller';
+            }
+          } else {
+            if (statusEl) {
+              statusEl.textContent = '저장 실패';
+              statusEl.className = 'badge bg-danger-subtle text-danger border border-danger-subtle smaller';
+            }
+          }
+        } catch (err) {
+          if (statusEl) {
+            statusEl.textContent = '오류';
+            statusEl.className = 'badge bg-danger-subtle text-danger border border-danger-subtle smaller';
+          }
+        }
+      }, 1000);
+    }
+
+    // ==========================================
+    // Custom Widget Read-Only Data Bridge (WS_CONTEXT) (moduleplus.md)
+    // ==========================================
+    const wsContextData = {
+      username: <%- JSON.stringify(user.name || user.username) %>,
+      todoCount: <%= schedules.filter(s => s.status === 'TODO').length %>,
+      inProgressCount: <%= schedules.filter(s => s.status === 'IN_PROGRESS').length %>,
+      doneCount: <%= schedules.filter(s => s.status === 'DONE').length %>,
+      top3Titles: <%- JSON.stringify((curTop3 || []).map(s => s.title)) %>
+    };
+
+    function sendWsContextToIframe(iframe) {
+      if (!iframe) return;
+      try {
+        const targetWindow = iframe.contentWindow;
+        if (targetWindow) {
+          targetWindow.postMessage({
+            type: 'WS_CONTEXT',
+            data: wsContextData
+          }, '*');
+        }
+      } catch (err) {
+        console.error('Failed to send WS_CONTEXT to iframe:', err);
+      }
+    }
+
+    // Allow custom widget iframes to request context on demand
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'REQUEST_WS_CONTEXT') {
+        const iframes = document.querySelectorAll('iframe.custom-widget-iframe');
+        iframes.forEach(iframe => sendWsContextToIframe(iframe));
+      }
+    });
+
+    // ==========================================
+    // Floating PIP (Picture-in-Picture) Logic (ploat.md)
+    // ==========================================
+    const PIP_STORAGE_KEY = 'worksmarter_pip_states';
+
+    function getPipStorage() {
+      try {
+        const raw = localStorage.getItem(PIP_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function setPipStorage(data) {
+      try {
+        localStorage.setItem(PIP_STORAGE_KEY, JSON.stringify(data));
+      } catch (e) {}
+    }
+
+    function savePipState(widgetId) {
+      const pipWin = document.getElementById('pip-win-' + widgetId);
+      if (!pipWin) return;
+      const storage = getPipStorage();
+      const rect = pipWin.getBoundingClientRect();
+      const isPinned = pipWin.classList.contains('pip-pinned');
+      storage[widgetId] = {
+        isPip: true,
+        top: Math.round(rect.top),
+        left: Math.round(rect.left),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        pinned: isPinned
+      };
+      setPipStorage(storage);
+    }
+
+    let pipStateDebounce = null;
+    function debouncedSavePipState(widgetId) {
+      clearTimeout(pipStateDebounce);
+      pipStateDebounce = setTimeout(() => savePipState(widgetId), 200);
+    }
+
+    function togglePipWidget(widgetId) {
+      const existingPip = document.getElementById('pip-win-' + widgetId);
+      if (existingPip) {
+        restorePipWidget(widgetId);
+      } else {
+        openPipWidget(widgetId);
+      }
+    }
+
+    function openPipWidget(widgetId, savedState = null) {
+      const gridItem = document.querySelector(`.grid-stack-item[gs-id="${widgetId}"]`);
+      if (!gridItem) return;
+
+      const itemContent = gridItem.querySelector('.grid-stack-item-content');
+      if (!itemContent) return;
+
+      const widgetCard = document.getElementById('widget-card-' + widgetId) || 
+                         (widgetId === 'top3' ? document.getElementById('top3-dropzone') : null) || 
+                         itemContent.querySelector('.card-custom');
+      if (!widgetCard) return;
+
+      // Check if already in PIP
+      if (document.getElementById('pip-win-' + widgetId)) return;
+
+      // 1. Get widget title
+      const titleAttr = gridItem.getAttribute('data-title');
+      const handleTitleSpan = widgetCard.querySelector('.handle-title span');
+      const widgetTitle = titleAttr || (handleTitleSpan ? handleTitleSpan.textContent.trim() : '위젯');
+
+      // 2. Insert placeholder in grid cell (preserve original position and size)
+      const placeholder = document.createElement('div');
+      placeholder.id = 'pip-placeholder-' + widgetId;
+      placeholder.className = 'pip-grid-placeholder';
+      placeholder.innerHTML = `
+        <i class="bi bi-pip"></i>
+        <div class="fw-semibold small mb-2">팝업(PIP) 모드로 표시 중</div>
+        <button type="button" class="btn btn-sm btn-outline-secondary px-3 py-1" onclick="restorePipWidget('${widgetId}')">
+          <i class="bi bi-box-arrow-in-down-left me-1"></i>원래 위치로 복귀
+        </button>
+      `;
+      itemContent.appendChild(placeholder);
+
+      // 3. Create floating PIP window element
+      const pipContainer = document.getElementById('pipFloatingContainer') || document.body;
+      const pipWin = document.createElement('div');
+      pipWin.id = 'pip-win-' + widgetId;
+      pipWin.className = 'pip-floating-window';
+      pipWin.setAttribute('data-widget-id', widgetId);
+
+      // Restore coordinates and sizes
+      const storage = getPipStorage();
+      const state = savedState || storage[widgetId] || {};
+      const isPinned = Boolean(state.pinned);
+
+      // Default cascade positioning
+      const existingWins = document.querySelectorAll('.pip-floating-window');
+      const winCount = existingWins.length;
+      let top = typeof state.top === 'number' ? state.top : (80 + (winCount * 30));
+      let left = typeof state.left === 'number' ? state.left : (window.innerWidth - 480 - (winCount * 25));
+      let width = typeof state.width === 'number' ? state.width : 440;
+      let height = typeof state.height === 'number' ? state.height : 360;
+
+      // Viewport safety bounds
+      top = Math.max(10, Math.min(top, window.innerHeight - 100));
+      left = Math.max(10, Math.min(left, window.innerWidth - 150));
+      width = Math.max(260, Math.min(width, window.innerWidth - 20));
+      height = Math.max(180, Math.min(height, window.innerHeight - 40));
+
+      pipWin.style.top = `${top}px`;
+      pipWin.style.left = `${left}px`;
+      pipWin.style.width = `${width}px`;
+      pipWin.style.height = `${height}px`;
+
+      if (isPinned) {
+        pipWin.classList.add('pip-pinned');
+        pipWin.style.zIndex = '1070';
+      } else {
+        pipWin.style.zIndex = '1030';
+      }
+
+      pipWin.innerHTML = `
+        <div class="pip-header" id="pip-header-${widgetId}">
+          <div class="pip-header-left">
+            <i class="bi bi-grip-vertical"></i>
+            <span class="pip-title-text" title="${widgetTitle}">${widgetTitle}</span>
+          </div>
+          <div class="pip-header-controls">
+            <button type="button" class="pip-btn pip-pin-btn ${isPinned ? 'pip-pin-active' : ''}" id="pip-pin-btn-${widgetId}" onclick="togglePipPin('${widgetId}')" title="${isPinned ? '상단 고정 해제' : '상단 고정하기'}">
+              <i class="bi ${isPinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}"></i>
+            </button>
+            <button type="button" class="pip-btn pip-close-btn" onclick="restorePipWidget('${widgetId}')" title="팝업 해제하기 (원래 위치로 복귀)">
+              <i class="bi bi-box-arrow-in-down-left"></i>
+            </button>
+          </div>
+        </div>
+        <div class="pip-body" id="pip-body-${widgetId}"></div>
+      `;
+
+      pipContainer.appendChild(pipWin);
+
+      // 4. Move actual widget DOM node into PIP body (preserves all states and events)
+      const pipBody = pipWin.querySelector('.pip-body');
+      pipBody.appendChild(widgetCard);
+
+      // If iframe inside, re-send WS_CONTEXT
+      const iframe = widgetCard.querySelector('iframe.custom-widget-iframe');
+      if (iframe) {
+        sendWsContextToIframe(iframe);
+      }
+
+      // 5. Initialize Dragging on header
+      const header = pipWin.querySelector('.pip-header');
+      initPipDrag(pipWin, header, widgetId);
+
+      // 6. Initialize ResizeObserver (and Chart resize)
+      const ro = new ResizeObserver(() => {
+        if (widgetId === 'stats' && window.productivityChart && typeof window.productivityChart.resize === 'function') {
+          try { window.productivityChart.resize(); } catch (e) {}
+        }
+        debouncedSavePipState(widgetId);
+      });
+      ro.observe(pipWin);
+      pipWin._pipResizeObserver = ro;
+
+      // Bring unpinned windows to front on click
+      pipWin.addEventListener('mousedown', () => {
+        if (!pipWin.classList.contains('pip-pinned')) {
+          document.querySelectorAll('.pip-floating-window:not(.pip-pinned)').forEach(w => {
+            w.style.zIndex = '1030';
+          });
+          pipWin.style.zIndex = '1035';
+        }
+      });
+
+      // If chart widget, resize chart immediately after move
+      if (widgetId === 'stats' && window.productivityChart && typeof window.productivityChart.resize === 'function') {
+        setTimeout(() => {
+          try { window.productivityChart.resize(); } catch (e) {}
+        }, 50);
+      }
+
+      // Save state
+      savePipState(widgetId);
+    }
+
+    function restorePipWidget(widgetId) {
+      const pipWin = document.getElementById('pip-win-' + widgetId);
+      if (!pipWin) return;
+
+      const widgetCard = pipWin.querySelector('.pip-body > .card-custom');
+      const placeholder = document.getElementById('pip-placeholder-' + widgetId);
+      const gridItem = document.querySelector(`.grid-stack-item[gs-id="${widgetId}"]`);
+
+      if (gridItem) {
+        const itemContent = gridItem.querySelector('.grid-stack-item-content');
+        if (placeholder) placeholder.remove();
+        if (widgetCard && itemContent) {
+          itemContent.appendChild(widgetCard);
+        }
+      }
+
+      if (pipWin._pipResizeObserver) {
+        pipWin._pipResizeObserver.disconnect();
+      }
+      pipWin.remove();
+
+      // Remove from localStorage
+      const storage = getPipStorage();
+      delete storage[widgetId];
+      setPipStorage(storage);
+
+      // If chart widget, resize
+      if (widgetId === 'stats' && window.productivityChart && typeof window.productivityChart.resize === 'function') {
+        setTimeout(() => {
+          try { window.productivityChart.resize(); } catch (e) {}
+        }, 50);
+      }
+
+      // If iframe inside, re-send WS_CONTEXT
+      if (widgetCard) {
+        const iframe = widgetCard.querySelector('iframe.custom-widget-iframe');
+        if (iframe) sendWsContextToIframe(iframe);
+      }
+    }
+
+    function togglePipPin(widgetId) {
+      const pipWin = document.getElementById('pip-win-' + widgetId);
+      const pinBtn = document.getElementById('pip-pin-btn-' + widgetId);
+      if (!pipWin || !pinBtn) return;
+
+      const isPinned = pipWin.classList.toggle('pip-pinned');
+      if (isPinned) {
+        pipWin.style.zIndex = '1070';
+        pinBtn.classList.add('pip-pin-active');
+        pinBtn.title = '상단 고정 해제';
+        pinBtn.innerHTML = '<i class="bi bi-pin-angle-fill"></i>';
+      } else {
+        pipWin.style.zIndex = '1030';
+        pinBtn.classList.remove('pip-pin-active');
+        pinBtn.title = '상단 고정하기';
+        pinBtn.innerHTML = '<i class="bi bi-pin-angle"></i>';
+      }
+      savePipState(widgetId);
+    }
+
+    function initPipDrag(pipWin, header, widgetId) {
+      let isDragging = false;
+      let startX = 0, startY = 0;
+      let startLeft = 0, startTop = 0;
+
+      header.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        if (e.target.closest('button')) return;
+
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        const rect = pipWin.getBoundingClientRect();
+        startLeft = rect.left;
+        startTop = rect.top;
+
+        header.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
+
+        function onMouseMove(ev) {
+          if (!isDragging) return;
+          const dx = ev.clientX - startX;
+          const dy = ev.clientY - startY;
+
+          let newLeft = startLeft + dx;
+          let newTop = startTop + dy;
+
+          const maxLeft = Math.max(0, window.innerWidth - pipWin.offsetWidth);
+          const maxTop = Math.max(0, window.innerHeight - pipWin.offsetHeight);
+
+          newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+          newTop = Math.max(0, Math.min(newTop, maxTop));
+
+          pipWin.style.left = `${newLeft}px`;
+          pipWin.style.top = `${newTop}px`;
+        }
+
+        function onMouseUp() {
+          if (isDragging) {
+            isDragging = false;
+            header.style.cursor = 'grab';
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            savePipState(widgetId);
+          }
+        }
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+    }
+
+    function restoreSavedPipWindows() {
+      const storage = getPipStorage();
+      Object.keys(storage).forEach(widgetId => {
+        const item = storage[widgetId];
+        if (item && item.isPip) {
+          openPipWidget(widgetId, item);
+        }
+      });
+    }
+
+    // ------------------------------------------
+    // Timer Controls Logic (Synchronized with Global Persistent Pomodoro Engine)
+    // ------------------------------------------
+    function updateTimerDisplay() {
+      const s = Math.max(0, Math.floor(timerRemainingSeconds));
+      const mins = Math.floor(s / 60);
+      const secs = s % 60;
+      const displayEl = document.getElementById('timerDisplay');
+      if (displayEl) {
+        displayEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
+    }
+
+    function syncDashboardWithPomodoro(detail) {
+      const startBtn = document.getElementById('timerStartBtn');
+      const pauseBtn = document.getElementById('timerPauseBtn');
+      const statusText = document.getElementById('timerStatusText');
+
+      if (!detail || !detail.state) {
+        isRunning = false;
+        timerRemainingSeconds = isDemoMode ? 60 : 25 * 60;
+        timerTotalSeconds = timerRemainingSeconds;
+        updateTimerDisplay();
+        if (startBtn) startBtn.disabled = false;
+        if (pauseBtn) pauseBtn.disabled = true;
+        if (statusText) statusText.textContent = isDemoMode ? '⚡ 1분 시연 모드 준비됨' : '준비 완료 • 지금 바로 몰입을 시작하세요';
+        return;
+      }
+
+      const state = detail.state;
+      const remaining = (detail.remainingSeconds !== undefined) ? detail.remainingSeconds : state.remainingSeconds;
+
+      // Sync demo mode from state
+      if (state.durationMinutes === 1 && !isDemoMode) {
+        isDemoMode = true;
+        timerTotalSeconds = 60;
+        const modeLabel = document.getElementById('modeLabel');
+        const modeToggleBtn = document.getElementById('modeToggleBtn');
+        if (modeLabel) modeLabel.textContent = '25분 정규 모드 전환';
+        if (modeToggleBtn) modeToggleBtn.classList.replace('btn-outline-light', 'btn-warning');
+      } else if (state.durationMinutes !== 1 && isDemoMode) {
+        isDemoMode = false;
+        timerTotalSeconds = 25 * 60;
+        const modeLabel = document.getElementById('modeLabel');
+        const modeToggleBtn = document.getElementById('modeToggleBtn');
+        if (modeLabel) modeLabel.textContent = '1분 시연 모드 전환';
+        if (modeToggleBtn) modeToggleBtn.classList.replace('btn-warning', 'btn-outline-light');
+      }
+
+      // Sync active schedule title/id
+      if (state.scheduleTitle) {
+        const titleEl = document.getElementById('activeScheduleTitle');
+        if (titleEl) titleEl.textContent = state.scheduleTitle;
+      }
+      if (state.scheduleId !== undefined && state.scheduleId !== null) {
+        const idEl = document.getElementById('activeScheduleId');
+        if (idEl) idEl.value = state.scheduleId;
+      }
+
+      timerRemainingSeconds = remaining;
+      isRunning = !!state.isRunning;
+      updateTimerDisplay();
+
+      if (isRunning) {
+        if (startBtn) startBtn.disabled = true;
+        if (pauseBtn) pauseBtn.disabled = false;
+        if (statusText) statusText.textContent = '🔥 몰입 집중 중... 끝까지 완수하세요!';
+      } else {
+        if (startBtn) startBtn.disabled = false;
+        if (pauseBtn) pauseBtn.disabled = true;
+        if (statusText) statusText.textContent = (remaining < timerTotalSeconds) ? '⏸ 일시 정지됨' : '준비 완료 • 지금 바로 몰입을 시작하세요';
+      }
+    }
+
+    function initDashboardPomodoro() {
+      // 1. Initial sync from localStorage
+      try {
+        const saved = localStorage.getItem('pomodoroState');
+        if (saved) {
+          const state = JSON.parse(saved);
+          let rem = state.remainingSeconds;
+          if (state.isRunning && state.endTime) {
+            rem = Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000));
+          }
+          syncDashboardWithPomodoro({ remainingSeconds: rem, isRunning: state.isRunning, state });
+        } else {
+          syncDashboardWithPomodoro(null);
+        }
+      } catch (e) {
+        syncDashboardWithPomodoro(null);
+      }
+
+      // 2. Listen to custom event from mini-timer engine
+      window.addEventListener('pomodoroTick', (e) => {
+        syncDashboardWithPomodoro(e.detail);
+      });
+
+      window.addEventListener('pomodoroCompleted', (e) => {
+        const displayEl = document.getElementById('timerDisplay');
+        const statusEl = document.getElementById('timerStatusText');
+        const startBtn = document.getElementById('timerStartBtn');
+        const pauseBtn = document.getElementById('timerPauseBtn');
+        if (displayEl) displayEl.textContent = "완료! 🎉";
+        if (statusEl) statusEl.textContent = "축하합니다! 집중을 완수했습니다.";
+        if (startBtn) startBtn.disabled = false;
+        if (pauseBtn) pauseBtn.disabled = true;
+      });
+
+      // 3. Listen to cross-tab storage changes
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'pomodoroState') {
+          if (!e.newValue) {
+            syncDashboardWithPomodoro(null);
+          } else {
+            try {
+              const state = JSON.parse(e.newValue);
+              let rem = state.remainingSeconds;
+              if (state.isRunning && state.endTime) {
+                rem = Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000));
+              }
+              syncDashboardWithPomodoro({ remainingSeconds: rem, isRunning: state.isRunning, state });
+            } catch (err) {}
+          }
+        }
+      });
+    }
+
+    async function togglePomodoroMode() {
+      let state = null;
+      try {
+        const saved = localStorage.getItem('pomodoroState');
+        if (saved) state = JSON.parse(saved);
+      } catch (e) {}
+
+      if (state && (state.isRunning || state.remainingSeconds < (state.durationMinutes * 60))) {
+        const ok = await showConfirm('타이머가 동작 중이거나 진행 중인 세션이 있습니다. 모드를 변경하면 초기화됩니다. 계속하시겠습니까?');
+        if (!ok) return;
+      }
+
+      resetTimer();
+      isDemoMode = !isDemoMode;
+      if (isDemoMode) {
+        timerTotalSeconds = 60;
+        timerRemainingSeconds = 60;
+        document.getElementById('modeLabel').textContent = '25분 정규 모드 전환';
+        document.getElementById('modeToggleBtn').classList.replace('btn-outline-light', 'btn-warning');
+        document.getElementById('timerStatusText').textContent = '⚡ 1분 시연용 단축 모드 활성화됨';
+      } else {
+        timerTotalSeconds = 25 * 60;
+        timerRemainingSeconds = 25 * 60;
+        document.getElementById('modeLabel').textContent = '1분 시연 모드 전환';
+        document.getElementById('modeToggleBtn').classList.replace('btn-warning', 'btn-outline-light');
+        document.getElementById('timerStatusText').textContent = '준비 완료 • 25분 정규 몰입 모드';
+      }
+      updateTimerDisplay();
+    }
+
+    function selectPomodoroSchedule(id, title) {
+      document.getElementById('activeScheduleId').value = id;
+      document.getElementById('activeScheduleTitle').textContent = title;
+      if (typeof window.startGlobalPomodoro === 'function') {
+        window.startGlobalPomodoro(id, title, isDemoMode ? 1 : 25);
+      }
+      if (window.innerWidth < 992) {
+        document.querySelector('.pomodoro-box')?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    function startTimer() {
+      getAudioContext();
+      let state = null;
+      try {
+        const saved = localStorage.getItem('pomodoroState');
+        if (saved) state = JSON.parse(saved);
+      } catch (e) {}
+
+      if (state && !state.isRunning && state.remainingSeconds > 0) {
+        // Resume paused session
+        if (typeof window.resumeGlobalPomodoro === 'function') {
+          window.resumeGlobalPomodoro();
+        } else if (typeof window.toggleMiniTimerPlayPause === 'function') {
+          window.toggleMiniTimerPlayPause();
+        }
+      } else {
+        // Start new session
+        const scheduleId = document.getElementById('activeScheduleId')?.value || null;
+        const scheduleTitle = document.getElementById('activeScheduleTitle')?.textContent || '선택된 일정 없음 (자유 집중)';
+        if (typeof window.startGlobalPomodoro === 'function') {
+          window.startGlobalPomodoro(scheduleId, scheduleTitle, isDemoMode ? 1 : 25);
+        }
+      }
+    }
+
+    function pauseTimer() {
+      if (typeof window.pauseGlobalPomodoro === 'function') {
+        window.pauseGlobalPomodoro();
+      } else if (typeof window.toggleMiniTimerPlayPause === 'function') {
+        window.toggleMiniTimerPlayPause();
+      }
+    }
+
+    function resetTimer() {
+      if (typeof window.resetGlobalPomodoro === 'function') {
+        window.resetGlobalPomodoro();
+      }
+      localStorage.removeItem('pomodoroState');
+      syncDashboardWithPomodoro(null);
+    }
+
+    // ==========================================
+    // 3. Edit Modal Populator (stastics.md 3번)
+    // ==========================================
+    function toggleDueInput(checkbox, inputId) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      if (checkbox.checked) {
+        input.dataset.oldValue = input.value;
+        input.value = '';
+        input.disabled = true;
+        input.required = false;
+      } else {
+        input.disabled = false;
+        input.required = true;
+        if (input.dataset.oldValue) {
+          input.value = input.dataset.oldValue;
+        }
+      }
+    }
+    window.toggleDueInput = toggleDueInput;
+
+    async function updateUndatedStatus(scheduleId, newStatus) {
+      try {
+        const res = await fetch(`/schedules/${scheduleId}/status`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (typeof showAlert === 'function') {
+            showAlert('일정 상태가 변경되었습니다.');
+          }
+          if (typeof userSchedules !== 'undefined') {
+            const s = userSchedules.find(x => String(x.id) === String(scheduleId));
+            if (s) s.status = newStatus;
+          }
+          setTimeout(() => location.reload(), 500);
+        } else {
+          if (typeof showAlert === 'function') {
+            showAlert(data.error || '상태 변경에 실패했습니다.');
+          }
+        }
+      } catch (err) {
+        if (typeof showAlert === 'function') {
+          showAlert('상태 변경 중 통신 오류가 발생했습니다.');
+        }
+      }
+    }
+    window.updateUndatedStatus = updateUndatedStatus;
+
+    function openEditModal(id, title, description, dueDateTime, category, isTop3, isImportant, status) {
+      const form = document.getElementById('editScheduleForm');
+      form.action = `/schedules/${id}/update`;
+      form.setAttribute('data-schedule-id', id);
+      document.getElementById('editTitle').value = title;
+      document.getElementById('editDescription').value = description;
+
+      const noDeadlineCheck = document.getElementById('editNoDeadline');
+      const dueInput = document.getElementById('editDueDateTime');
+      if (!dueDateTime || dueDateTime === 'null' || dueDateTime.trim() === '') {
+        if (noDeadlineCheck) noDeadlineCheck.checked = true;
+        if (dueInput) {
+          dueInput.value = '';
+          dueInput.disabled = true;
+          dueInput.required = false;
+        }
+      } else {
+        if (noDeadlineCheck) noDeadlineCheck.checked = false;
+        if (dueInput) {
+          dueInput.value = dueDateTime.replace(' ', 'T').slice(0, 16);
+          dueInput.disabled = false;
+          dueInput.required = true;
+        }
+      }
+
+      document.getElementById('editCategory').value = category || '개인';
+      document.getElementById('editIsTop3').checked = (parseInt(isTop3, 10) === 1);
+      document.getElementById('editIsImportant').checked = (parseInt(isImportant, 10) === 1);
+      
+      const statusEl = document.getElementById('editStatus');
+      if (statusEl) {
+        statusEl.value = status || 'TODO';
+      }
+      
+      const modal = new bootstrap.Modal(document.getElementById('editScheduleModal'));
+      modal.show();
+    }
+
+    function openEditModalForScheduleId(id) {
+      if (typeof userSchedules !== 'undefined') {
+        const sched = userSchedules.find(x => String(x.id) === String(id));
+        if (sched) {
+          openEditModal(sched.id, sched.title, sched.description || '', sched.due_datetime, sched.category, sched.is_top3, sched.is_important, sched.status);
+          return;
+        }
+      }
+      const modal = new bootstrap.Modal(document.getElementById('editScheduleModal'));
+      modal.show();
+    }
+
+    window.openEditModal = openEditModal;
+    window.openEditModalForScheduleId = openEditModalForScheduleId;
+
+    // ==========================================
+    // 4. Bulk Actions (Status & Delete)
+    // ==========================================
+    function getSelectedScheduleIds() {
+      const checkedBoxes = document.querySelectorAll('.schedule-select-checkbox:checked');
+      return Array.from(checkedBoxes).map(cb => cb.value);
+    }
+
+    function onScheduleCheckboxChange() {
+      const selectedIds = getSelectedScheduleIds();
+      const bar = document.getElementById('bulkActionBar');
+      const countSpan = document.getElementById('bulkSelectedCount');
+      if (!bar || !countSpan) return;
+
+      if (selectedIds.length > 0) {
+        countSpan.textContent = selectedIds.length;
+        bar.classList.remove('d-none');
+      } else {
+        bar.classList.add('d-none');
+      }
+    }
+
+    function clearBulkSelection() {
+      document.querySelectorAll('.schedule-select-checkbox:checked').forEach(cb => {
+        cb.checked = false;
+      });
+      onScheduleCheckboxChange();
+    }
+
+    async function submitBulkStatus(status) {
+      const ids = getSelectedScheduleIds();
+      if (ids.length === 0) return;
+      const ok = await showConfirm(`선택한 ${ids.length}개의 일정 상태를 [${status}] 상태로 변경하시겠습니까?`);
+      if (!ok) return;
+
+      try {
+        const res = await fetch('/schedules/bulk-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ ids, status })
+        });
+        const data = await res.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          showAlert(data.error || '상태 일괄 변경에 실패했습니다.');
+        }
+      } catch (err) {
+        showAlert('오류가 발생했습니다: ' + err.message);
+      }
+    }
+
+    async function submitBulkDelete() {
+      const ids = getSelectedScheduleIds();
+      if (ids.length === 0) return;
+      const ok = await showConfirm(`선택한 ${ids.length}개의 일정을 정말로 모두 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`);
+      if (!ok) return;
+
+      try {
+        const res = await fetch('/schedules/bulk-delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ ids })
+        });
+        const data = await res.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          showAlert(data.error || '일괄 삭제에 실패했습니다.');
+        }
+      } catch (err) {
+        showAlert('오류가 발생했습니다: ' + err.message);
+      }
+    }
+
+    // ==========================================
+    // 5. Telegram Code Masking Toggle
+    // ==========================================
+    function toggleTgCodeMask(displayId, btnId, realCode) {
+      const displayEl = document.getElementById(displayId);
+      const btnEl = document.getElementById(btnId);
+      if (!displayEl || !btnEl) return;
+      const isMasked = displayEl.textContent.trim() === '••••••';
+      if (isMasked) {
+        displayEl.textContent = realCode;
+        btnEl.innerHTML = '<i class="bi bi-eye-slash"></i>';
+        btnEl.title = '연동 코드 숨기기';
+      } else {
+        displayEl.textContent = '••••••';
+        btnEl.innerHTML = '<i class="bi bi-eye"></i>';
+        btnEl.title = '연동 코드 표시';
+      }
+    }
+
+    // ==========================================
+    // 6. 2026-2027 Holidays & Calendar Renderer
+    // ==========================================
+    const HOLIDAYS = {
+      KR: {
+        name: '한국',
+        prefix: '한',
+        badgeClass: 'holiday-badge-KR',
+        dates: {
+          // 2026
+          '2026-01-01': '신정',
+          '2026-02-16': '설날 연휴',
+          '2026-02-17': '설날',
+          '2026-02-18': '설날 연휴',
+          '2026-03-01': '삼일절',
+          '2026-03-02': '삼일절 대체공휴일',
+          '2026-05-05': '어린이날',
+          '2026-05-24': '부처님오신날',
+          '2026-05-25': '부처님오신날 대체공휴일',
+          '2026-06-06': '현충일',
+          '2026-08-15': '광복절',
+          '2026-08-17': '광복절 대체공휴일',
+          '2026-09-24': '추석 연휴',
+          '2026-09-25': '추석',
+          '2026-09-26': '추석 연휴',
+          '2026-10-03': '개천절',
+          '2026-10-05': '개천절 대체공휴일',
+          '2026-10-09': '한글날',
+          '2026-12-25': '크리스마스',
+          // 2027
+          '2027-01-01': '신정',
+          '2027-02-06': '설날 연휴',
+          '2027-02-07': '설날',
+          '2027-02-08': '설날 연휴',
+          '2027-02-09': '설날 대체공휴일',
+          '2027-03-01': '삼일절',
+          '2027-05-05': '어린이날',
+          '2027-05-13': '부처님오신날',
+          '2027-06-06': '현충일',
+          '2027-06-07': '현충일 대체공휴일',
+          '2027-08-15': '광복절',
+          '2027-08-16': '광복절 대체공휴일',
+          '2027-09-14': '추석 연휴',
+          '2027-09-15': '추석',
+          '2027-09-16': '추석 연휴',
+          '2027-10-03': '개천절',
+          '2027-10-04': '개천절 대체공휴일',
+          '2027-10-09': '한글날',
+          '2027-10-11': '한글날 대체공휴일',
+          '2027-12-25': '크리스마스'
+        }
+      },
+      JP: {
+        name: '일본',
+        prefix: '일',
+        badgeClass: 'holiday-badge-JP',
+        dates: {
+          // 2026
+          '2026-01-01': '원단(신정)',
+          '2026-01-12': '성인의 날',
+          '2026-02-11': '건국기념일',
+          '2026-02-23': '천황탄생일',
+          '2026-03-20': '춘분의 날',
+          '2026-04-29': '쇼와의 날',
+          '2026-05-03': '헌법기념일',
+          '2026-05-04': '녹색의 날',
+          '2026-05-05': '어린이날',
+          '2026-05-06': '대체휴일',
+          '2026-07-20': '바다의 날',
+          '2026-08-11': '산의 날',
+          '2026-09-21': '경로의 날',
+          '2026-09-22': '국민의 휴일',
+          '2026-09-23': '추분의 날',
+          '2026-10-12': '스포츠의 날',
+          '2026-11-03': '문화의 날',
+          '2026-11-23': '근로감사의 날',
+          // 2027
+          '2027-01-01': '원단(신정)',
+          '2027-01-11': '성인의 날',
+          '2027-02-11': '건국기념일',
+          '2027-02-23': '천황탄생일',
+          '2027-03-21': '춘분의 날',
+          '2027-03-22': '대체휴일',
+          '2027-04-29': '쇼와의 날',
+          '2027-05-03': '헌법기념일',
+          '2027-05-04': '녹색의 날',
+          '2027-05-05': '어린이날',
+          '2027-07-19': '바다의 날',
+          '2027-08-11': '산의 날',
+          '2027-09-20': '경로의 날',
+          '2027-09-23': '추분의 날',
+          '2027-10-11': '스포츠의 날',
+          '2027-11-03': '문화의 날',
+          '2027-11-23': '근로감사의 날'
+        }
+      },
+      CN: {
+        name: '중국',
+        prefix: '중',
+        badgeClass: 'holiday-badge-CN',
+        dates: {
+          // 2026
+          '2026-01-01': '원단(신정)',
+          '2026-02-16': '춘절 연휴',
+          '2026-02-17': '춘절',
+          '2026-02-18': '춘절 연휴',
+          '2026-02-19': '춘절 연휴',
+          '2026-04-05': '청명절',
+          '2026-04-06': '청명절 연휴',
+          '2026-05-01': '노동절',
+          '2026-06-19': '단오절',
+          '2026-09-25': '중추절',
+          '2026-10-01': '국경절',
+          '2026-10-02': '국경절 연휴',
+          '2026-10-03': '국경절 연휴',
+          // 2027
+          '2027-01-01': '원단(신정)',
+          '2027-02-05': '춘절 연휴',
+          '2027-02-06': '춘절',
+          '2027-02-07': '춘절 연휴',
+          '2027-02-08': '춘절 연휴',
+          '2027-04-05': '청명절',
+          '2027-05-01': '노동절',
+          '2027-06-09': '단오절',
+          '2027-09-15': '중추절',
+          '2027-10-01': '국경절',
+          '2027-10-02': '국경절 연휴',
+          '2027-10-03': '국경절 연휴'
+        }
+      },
+      US: {
+        name: '미국',
+        prefix: '미',
+        badgeClass: 'holiday-badge-US',
+        dates: {
+          // 2026
+          '2026-01-01': '신년일',
+          '2026-01-19': '마틴루터킹의날',
+          '2026-02-16': '대통령의날',
+          '2026-05-25': '메모리얼데이',
+          '2026-06-19': '준틴스(노예해방일)',
+          '2026-07-03': '독립기념일(대체)',
+          '2026-07-04': '독립기념일',
+          '2026-09-07': '노동절',
+          '2026-10-12': '콜럼버스의날',
+          '2026-11-11': '재향군인의날',
+          '2026-11-26': '추수감사절',
+          '2026-12-25': '크리스마스',
+          // 2027
+          '2027-01-01': '신년일',
+          '2027-01-18': '마틴루터킹의날',
+          '2027-02-15': '대통령의날',
+          '2027-05-31': '메모리얼데이',
+          '2027-06-18': '준틴스(대체)',
+          '2027-06-19': '준틴스(노예해방일)',
+          '2027-07-04': '독립기념일',
+          '2027-07-05': '독립기념일(대체)',
+          '2027-09-06': '노동절',
+          '2027-10-11': '콜럼버스의날',
+          '2027-11-11': '재향군인의날',
+          '2027-11-25': '추수감사절',
+          '2027-12-24': '크리스마스(대체)',
+          '2027-12-25': '크리스마스'
+        }
+      }
+    };
+
+    let currentCalYear = new Date().getFullYear();
+    let currentCalMonth = new Date().getMonth(); // 0-indexed
+
+    function renderCalendar() {
+      const container = document.getElementById('calendarCellsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const firstDay = new Date(currentCalYear, currentCalMonth, 1).getDay();
+      const lastDate = new Date(currentCalYear, currentCalMonth + 1, 0).getDate();
+      const prevLastDate = new Date(currentCalYear, currentCalMonth, 0).getDate();
+
+      const titleEl = document.getElementById('calendarMonthYearTitle');
+      if (titleEl) {
+        titleEl.textContent = `${currentCalYear}년 ${currentCalMonth + 1}월`;
+      }
+
+      const todayStr = '<%= currentKSTDate %>'; // YYYY-MM-DD
+
+      // Get selected country holiday keys
+      const checkedCountries = Array.from(document.querySelectorAll('.holiday-country-check:checked')).map(cb => cb.value);
+
+      // Previous month filler days
+      for (let i = firstDay - 1; i >= 0; i--) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'calendar-cell other-month';
+        dayDiv.innerHTML = `<span class="day-num">${prevLastDate - i}</span>`;
+        container.appendChild(dayDiv);
+      }
+
+      // Current month days
+      for (let d = 1; d <= lastDate; d++) {
+        const dateStr = `${currentCalYear}-${String(currentCalMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'calendar-cell' + (dateStr === todayStr ? ' today' : '');
+
+        const dayOfWeek = (firstDay + d - 1) % 7;
+        const colorClass = dayOfWeek === 0 ? ' text-danger' : (dayOfWeek === 6 ? ' text-primary' : '');
+
+        let inner = `<span class="day-num${colorClass}">${d}</span>`;
+
+        // Render Holidays for checked countries
+        checkedCountries.forEach(cKey => {
+          const cData = HOLIDAYS[cKey];
+          if (cData && cData.dates && cData.dates[dateStr]) {
+            const hName = cData.dates[dateStr];
+            inner += `<span class="calendar-holiday-badge ${cData.badgeClass}" title="[${cData.name}] ${hName}">
+              [${cData.prefix}] ${hName}
+            </span>`;
+          }
+        });
+
+        dayDiv.innerHTML = inner;
+
+        // Match schedules for this day
+        const matched = userSchedules.filter(s => s.due_datetime && s.due_datetime.startsWith(dateStr));
+        const eventsWrapper = document.createElement('div');
+        eventsWrapper.className = 'd-flex flex-column gap-1 mt-1';
+
+        matched.forEach(s => {
+          const badge = document.createElement('span');
+          badge.className = `calendar-event-badge cal-status-${s.status || 'TODO'}`;
+          badge.setAttribute('data-status', s.status || 'TODO');
+          badge.setAttribute('data-schedule-id', s.id);
+          badge.draggable = true;
+          badge.setAttribute('data-drag-source', 'WORKSPACE');
+          badge.setAttribute('data-drag-type', 'PERSONAL');
+          badge.setAttribute('data-drag-id', s.id);
+          badge.setAttribute('data-current-status', s.status || 'TODO');
+          badge.title = `${s.title} (${s.status || 'TODO'}) (드래그하여 날짜 이동 / Top 3 등록 / 우클릭 관리)`;
+          badge.textContent = `${s.status === 'DONE' ? '✓ ' : ''}${s.title}`;
+          badge.style.cursor = 'grab';
+
+          badge.ondragstart = function(ev) {
+            currentDragItem = { source: 'WORKSPACE', type: 'PERSONAL', id: s.id, currentStatus: s.status, element: badge };
+            ev.dataTransfer.setData('text/plain', JSON.stringify({ id: s.id, due: s.due_datetime, source: 'WORKSPACE', type: 'PERSONAL', currentStatus: s.status }));
+            ev.dataTransfer.setData('application/json', JSON.stringify({ id: s.id, type: 'PERSONAL', source: 'WORKSPACE', currentStatus: s.status }));
+            ev.dataTransfer.effectAllowed = 'copyMove';
+          };
+
+          badge.oncontextmenu = function(ev) {
+            openScheduleContextMenu(ev, { id: s.id, title: s.title, status: s.status });
+          };
+
+          eventsWrapper.appendChild(badge);
+        });
+
+        dayDiv.appendChild(eventsWrapper);
+
+        // Drag & Drop handlers for date rescheduling
+        dayDiv.ondragover = function(ev) {
+          ev.preventDefault();
+          dayDiv.style.backgroundColor = '#e0e7ff';
+        };
+        dayDiv.ondragleave = function(ev) {
+          dayDiv.style.backgroundColor = '';
+        };
+        dayDiv.ondrop = async function(ev) {
+          ev.preventDefault();
+          dayDiv.style.backgroundColor = '';
+          const dataStr = ev.dataTransfer.getData('text/plain');
+          if (!dataStr) return;
+          try {
+            const parsed = JSON.parse(dataStr);
+            const id = parsed.id;
+            const due = parsed.due || '';
+            const existingTime = (due && due.includes(' ')) ? due.split(' ')[1] : '18:00';
+            const newDueDateTime = `${dateStr} ${existingTime}`;
+
+            const res = await fetch(`/schedules/${id}/reschedule`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ due_datetime: newDueDateTime })
+            });
+            if (res.ok) {
+              const target = userSchedules.find(x => String(x.id) === String(id));
+              if (target) target.due_datetime = newDueDateTime;
+              renderCalendar();
+              showAlert(`일정 마감일이 ${dateStr}로 변경되었습니다.`);
+            } else {
+              showAlert('날짜 변경에 실패했습니다.');
+            }
+          } catch (err) {
+            console.error('Drag drop reschedule error:', err);
+          }
+        };
+
+        container.appendChild(dayDiv);
+      }
+
+      // Next month filler days to complete grid
+      const totalCells = firstDay + lastDate;
+      const nextDays = (7 - (totalCells % 7)) % 7;
+      for (let n = 1; n <= nextDays; n++) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'calendar-cell other-month';
+        dayDiv.innerHTML = `<span class="day-num">${n}</span>`;
+        container.appendChild(dayDiv);
+      }
+    }
+
+    function changeMonth(delta) {
+      currentCalMonth += delta;
+      if (currentCalMonth < 0) {
+        currentCalMonth = 11;
+        currentCalYear--;
+      } else if (currentCalMonth > 11) {
+        currentCalMonth = 0;
+        currentCalYear++;
+      }
+      renderCalendar();
+    }
+
+    function resetToCurrentMonth() {
+      currentCalYear = new Date().getFullYear();
+      currentCalMonth = new Date().getMonth();
+      renderCalendar();
+    }
+
+    // ==========================================
+    // Top 3 Two-Way Drag & Drop & Async Controls (top3.md)
+    // ==========================================
+    let currentDragItem = null;
+
+    // Global dragstart listener for any cards or badges marked with data-drag-source
+    document.addEventListener('dragstart', (e) => {
+      const card = e.target.closest('[data-drag-source]');
+      if (!card) return;
+
+      const source = card.getAttribute('data-drag-source');
+      const type = card.getAttribute('data-drag-type');
+      const id = parseInt(card.getAttribute('data-drag-id'), 10);
+      const currentStatus = card.getAttribute('data-current-status');
+      const teamId = card.getAttribute('data-team-id');
+
+      currentDragItem = { source, type, id, currentStatus, teamId, element: card };
+      try {
+        e.dataTransfer.setData('application/json', JSON.stringify({ source, type, id, currentStatus, teamId }));
+        e.dataTransfer.setData('text/plain', JSON.stringify({ source, type, id, currentStatus, teamId }));
+      } catch (err) {}
+      e.dataTransfer.effectAllowed = source === 'TOP3' ? 'move' : 'copyMove';
+    });
+
+    document.addEventListener('dragend', () => {
+      currentDragItem = null;
+      const dropzone = document.getElementById('top3-dropzone');
+      if (dropzone) dropzone.classList.remove('top3-drag-highlight');
+      document.querySelectorAll('.kanban-column, .kanban-col').forEach(col => {
+        col.classList.remove('kanban-drag-highlight');
+      });
+    });
+
+    // 1. Dropzone: Drag into Top 3 to ADD
+    document.addEventListener('DOMContentLoaded', () => {
+      const top3Dropzone = document.getElementById('top3-dropzone');
+      if (top3Dropzone) {
+        top3Dropzone.addEventListener('dragover', (e) => {
+          if (currentDragItem && currentDragItem.source === 'WORKSPACE') {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            top3Dropzone.classList.add('top3-drag-highlight');
+          }
+        });
+
+        top3Dropzone.addEventListener('dragleave', (e) => {
+          if (!top3Dropzone.contains(e.relatedTarget)) {
+            top3Dropzone.classList.remove('top3-drag-highlight');
+          }
+        });
+
+        top3Dropzone.addEventListener('drop', (e) => {
+          if (currentDragItem && currentDragItem.source === 'WORKSPACE') {
+            e.preventDefault();
+            top3Dropzone.classList.remove('top3-drag-highlight');
+            const item = currentDragItem;
+            currentDragItem = null;
+            addTop3Schedule(item.type, item.id);
+          }
+        });
+      }
+
+      // 2. Drag outside of Top 3 to REMOVE (anywhere on body)
+      document.body.addEventListener('dragover', (e) => {
+        if (currentDragItem && currentDragItem.source === 'TOP3') {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        }
+      });
+
+      document.body.addEventListener('drop', (e) => {
+        if (currentDragItem && currentDragItem.source === 'TOP3') {
+          const dropzone = document.getElementById('top3-dropzone');
+          if (dropzone && dropzone.contains(e.target)) {
+            return; // Dropped back inside dropzone
+          }
+          e.preventDefault();
+          const item = currentDragItem;
+          currentDragItem = null;
+          removeTop3Schedule(null, item.type, item.id);
+        }
+      });
+
+      // 3. 3-Column Kanban Board Drag & Drop Status Change (todos1.md)
+      const kanbanColumns = document.querySelectorAll('.kanban-column, .kanban-col');
+      kanbanColumns.forEach(col => {
+        col.addEventListener('dragover', (e) => {
+          // [충돌 방지 규칙 1]: Top 3 카드(data-drag-source="TOP3")는 칸반 컬럼 위라도 무시하여 body로 전파되게 함
+          if (!currentDragItem || currentDragItem.source !== 'WORKSPACE') {
+            return;
+          }
+
+          // 해당 보드 영역 검증 (개인 일정은 #kanbanView, 팀 일정은 #teamScopeView)
+          const isPersonal = currentDragItem.type === 'PERSONAL';
+          const isTeam = currentDragItem.type === 'TEAM';
+          const inPersonalView = !!col.closest('#kanbanView');
+          const inTeamView = !!col.closest('#teamScopeView');
+
+          if ((isPersonal && !inPersonalView) || (isTeam && !inTeamView)) {
+            return;
+          }
+
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          col.classList.add('kanban-drag-highlight');
+        });
+
+        col.addEventListener('dragleave', (e) => {
+          if (!col.contains(e.relatedTarget)) {
+            col.classList.remove('kanban-drag-highlight');
+          }
+        });
+
+        col.addEventListener('drop', (e) => {
+          // [충돌 방지 규칙 1]: Top 3 카드는 칸반 컬럼 드롭 무시 (body로 전파)
+          if (!currentDragItem || currentDragItem.source !== 'WORKSPACE') {
+            return;
+          }
+
+          const isPersonal = currentDragItem.type === 'PERSONAL';
+          const isTeam = currentDragItem.type === 'TEAM';
+          const inPersonalView = !!col.closest('#kanbanView');
+          const inTeamView = !!col.closest('#teamScopeView');
+
+          if ((isPersonal && !inPersonalView) || (isTeam && !inTeamView)) {
+            return;
+          }
+
+          e.preventDefault();
+          col.classList.remove('kanban-drag-highlight');
+
+          const targetStatus = col.getAttribute('data-status');
+          if (!targetStatus) return;
+
+          const { type, id, currentStatus, teamId, element } = currentDragItem;
+          currentDragItem = null;
+
+          // 원래 자신이 속해 있던 컬럼과 동일한 컬럼에 놓으면 아무 API 호출 없이 종료
+          if (currentStatus === targetStatus) {
+            return;
+          }
+
+          // [충돌 방지 규칙 2]: 다른 상태 컬럼에 드롭한 경우 실제 상태 변경
+          if (type === 'PERSONAL') {
+            updatePersonalScheduleStatus(id, targetStatus, element, col);
+          } else if (type === 'TEAM') {
+            updateTeamScheduleStatusByDrag(teamId, id, targetStatus, element, col);
+          }
+        });
+      });
+    });
+
+    function addTop3Schedule(type, id) {
+      fetch('/api/top3/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ type, id: parseInt(id, 10) })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.success) {
+          window.location.reload();
+        } else {
+          if (typeof showAlert === 'function') {
+            showAlert((data && data.error) || 'Top 3 목표 등록에 실패했습니다.');
+          } else {
+            alert((data && data.error) || 'Top 3 목표 등록에 실패했습니다.');
+          }
+        }
+      })
+      .catch(err => {
+        console.error('Failed to add Top 3 schedule:', err);
+        if (typeof showAlert === 'function') {
+          showAlert('Top 3 등록 중 네트워크 오류가 발생했습니다.');
+        } else {
+          alert('네트워크 오류가 발생했습니다.');
+        }
+      });
+    }
+
+    function removeTop3Schedule(event, type, id) {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+      fetch('/api/top3/remove', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ type, id: parseInt(id, 10) })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.success) {
+          window.location.reload();
+        } else {
+          if (typeof showAlert === 'function') {
+            showAlert((data && data.error) || 'Top 3 목표 해제에 실패했습니다.');
+          } else {
+            alert((data && data.error) || 'Top 3 목표 해제에 실패했습니다.');
+          }
+        }
+      })
+      .catch(err => {
+        console.error('Failed to remove Top 3 schedule:', err);
+        if (typeof showAlert === 'function') {
+          showAlert('Top 3 해제 중 네트워크 오류가 발생했습니다.');
+        } else {
+          alert('네트워크 오류가 발생했습니다.');
+        }
+      });
+    }
+
+    // ==========================================
+    // Team Schedule Async Status Update (testui4.md)
+    // ==========================================
+    function updateTeamScheduleStatus(event, teamId, scheduleId, selectEl) {
+      if (event) {
+        event.preventDefault();
+      }
+      const newStatus = selectEl.value;
+      const previousStatus = selectEl.getAttribute('data-current-status') || newStatus;
+
+      fetch(`/teams/${teamId}/schedules/${scheduleId}/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.success) {
+          selectEl.setAttribute('data-current-status', newStatus);
+          const card = selectEl.closest('.kanban-card');
+          if (card) {
+            card.setAttribute('data-current-status', newStatus);
+            const destCol = document.querySelector(`#teamScopeView .kanban-col[data-status="${newStatus}"]`);
+            if (destCol) {
+              const destCardsContainer = destCol.querySelector('.kanban-cards');
+              if (destCardsContainer && card.parentElement !== destCardsContainer) {
+                destCardsContainer.appendChild(card);
+              }
+            }
+            const titleEl = card.querySelector('h6');
+            if (titleEl) {
+              if (newStatus === 'DONE') {
+                card.classList.add('done-card');
+                card.classList.remove('border-primary', 'border-opacity-25');
+                titleEl.classList.add('text-decoration-line-through', 'text-muted');
+                titleEl.classList.remove('text-dark');
+              } else if (newStatus === 'IN_PROGRESS') {
+                card.classList.remove('done-card');
+                card.classList.add('border-primary', 'border-opacity-25');
+                titleEl.classList.remove('text-decoration-line-through', 'text-muted');
+                titleEl.classList.add('text-dark');
+              } else {
+                card.classList.remove('done-card', 'border-primary', 'border-opacity-25');
+                titleEl.classList.remove('text-decoration-line-through', 'text-muted');
+                titleEl.classList.add('text-dark');
+              }
+            }
+            updateTeamKanbanCounts();
+          }
+        } else {
+          if (typeof showAlert === 'function') {
+            showAlert((data && data.error) || '상태 변경에 실패했습니다.');
+          } else {
+            alert((data && data.error) || '상태 변경에 실패했습니다.');
+          }
+          selectEl.value = previousStatus;
+        }
+      })
+      .catch(err => {
+        console.error('Failed to update team schedule status:', err);
+        if (typeof showAlert === 'function') {
+          showAlert('팀 일정 상태 변경 중 통신 오류가 발생했습니다.');
+        } else {
+          alert('통신 오류가 발생했습니다.');
+        }
+        selectEl.value = previousStatus;
+      });
+    }
+
+    function updateTeamKanbanCounts() {
+      const teamCols = document.querySelectorAll('#teamScopeView .kanban-col');
+      teamCols.forEach(col => {
+        const badge = col.querySelector('.kanban-col-header .badge');
+        const cards = col.querySelectorAll('.kanban-cards .kanban-card');
+        if (badge) {
+          badge.textContent = cards.length;
+        }
+      });
+    }
+
+    // ==========================================
+    // Kanban Drag & Drop Status Update Helpers (todos1.md)
+    // ==========================================
+    function updateTeamScheduleStatusByDrag(teamId, scheduleId, targetStatus, cardEl, targetCol) {
+      const card = cardEl || document.querySelector(`#teamScopeView .kanban-card[data-drag-id="${scheduleId}"]`);
+      const selectEl = card ? card.querySelector('.team-schedule-status-select') : null;
+      if (selectEl) {
+        selectEl.value = targetStatus;
+        updateTeamScheduleStatus(null, teamId, scheduleId, selectEl);
+      } else {
+        fetch(`/teams/${teamId}/schedules/${scheduleId}/status`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ status: targetStatus })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.success) {
+            if (card) {
+              card.setAttribute('data-current-status', targetStatus);
+              const destCardsContainer = targetCol.querySelector('.kanban-cards');
+              if (destCardsContainer && card.parentElement !== destCardsContainer) {
+                destCardsContainer.appendChild(card);
+              }
+              const titleEl = card.querySelector('h6');
+              if (titleEl) {
+                if (targetStatus === 'DONE') {
+                  card.classList.add('done-card');
+                  card.classList.remove('border-primary', 'border-opacity-25');
+                  titleEl.classList.add('text-decoration-line-through', 'text-muted');
+                  titleEl.classList.remove('text-dark');
+                } else if (targetStatus === 'IN_PROGRESS') {
+                  card.classList.remove('done-card');
+                  card.classList.add('border-primary', 'border-opacity-25');
+                  titleEl.classList.remove('text-decoration-line-through', 'text-muted');
+                  titleEl.classList.add('text-dark');
+                } else {
+                  card.classList.remove('done-card', 'border-primary', 'border-opacity-25');
+                  titleEl.classList.remove('text-decoration-line-through', 'text-muted');
+                  titleEl.classList.add('text-dark');
+                }
+              }
+              updateTeamKanbanCounts();
+            }
+          } else {
+            if (typeof showAlert === 'function') {
+              showAlert((data && data.error) || '팀 일정 상태 변경에 실패했습니다.');
+            } else {
+              alert((data && data.error) || '팀 일정 상태 변경에 실패했습니다.');
+            }
+          }
+        })
+        .catch(err => {
+          console.error('Failed to update team schedule status via drag:', err);
+          if (typeof showAlert === 'function') {
+            showAlert('팀 일정 상태 변경 중 통신 오류가 발생했습니다.');
+          } else {
+            alert('통신 오류가 발생했습니다.');
+          }
+        });
+      }
+    }
+
+    function updatePersonalScheduleStatus(scheduleId, newStatus, cardEl, targetCol) {
+      const card = cardEl || document.querySelector(`#kanbanView .kanban-card[data-drag-id="${scheduleId}"]`);
+
+      fetch(`/schedules/${scheduleId}/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.success) {
+          if (card) {
+            card.setAttribute('data-current-status', newStatus);
+            const destCardsContainer = targetCol.querySelector('.kanban-cards');
+            if (destCardsContainer && card.parentElement !== destCardsContainer) {
+              destCardsContainer.appendChild(card);
+            }
+
+            const titleEl = card.querySelector('h6');
+            if (titleEl) {
+              if (newStatus === 'DONE') {
+                card.classList.add('done-card');
+                card.classList.remove('border-primary', 'border-opacity-25');
+                titleEl.classList.add('text-decoration-line-through', 'text-muted');
+                titleEl.classList.remove('text-dark');
+              } else if (newStatus === 'IN_PROGRESS') {
+                card.classList.remove('done-card');
+                card.classList.add('border-primary', 'border-opacity-25');
+                titleEl.classList.remove('text-decoration-line-through', 'text-muted');
+                titleEl.classList.add('text-dark');
+              } else {
+                card.classList.remove('done-card', 'border-primary', 'border-opacity-25');
+                titleEl.classList.remove('text-decoration-line-through', 'text-muted');
+                titleEl.classList.add('text-dark');
+              }
+            }
+
+            updatePersonalCardActionButtons(card, scheduleId, newStatus);
+            updatePersonalKanbanCounts();
+          }
+
+          // 1. userSchedules 전역 데이터 갱신
+          if (typeof userSchedules !== 'undefined') {
+            const target = userSchedules.find(x => String(x.id) === String(scheduleId));
+            if (target) target.status = newStatus;
+          }
+
+          // 2. 캘린더 칩 실시간 동기화
+          if (typeof renderCalendar === 'function') {
+            renderCalendar();
+          }
+
+          // 3. 생산성 통계 도넛 차트 즉시 갱신 (stastics.md 1번)
+          if (typeof refreshProductivityStats === 'function') {
+            refreshProductivityStats(data.stats);
+          }
+        } else {
+          if (typeof showAlert === 'function') {
+            showAlert((data && data.error) || '일정 상태 변경에 실패했습니다.');
+          } else {
+            alert((data && data.error) || '일정 상태 변경에 실패했습니다.');
+          }
+        }
+      })
+      .catch(err => {
+        console.error('Failed to update personal schedule status:', err);
+        if (typeof showAlert === 'function') {
+          showAlert('일정 상태 변경 중 통신 오류가 발생했습니다.');
+        } else {
+          alert('통신 오류가 발생했습니다.');
+        }
+      });
+    }
+
+    function updatePersonalCardActionButtons(cardEl, scheduleId, status) {
+      const titleEl = cardEl.querySelector('h6');
+      const rawTitle = titleEl ? titleEl.textContent.trim() : '';
+      const escapedTitle = rawTitle.replace(/'/g, "\\'");
+
+      // 우클릭 컨텍스트 메뉴 속성 동기화
+      cardEl.setAttribute('oncontextmenu', `openScheduleContextMenu(event, { id: '${scheduleId}', title: '${escapedTitle}', status: '${status}' })`);
+
+      // 카드의 마지막 액션 컨트롤 영역 찾기
+      const actionContainers = cardEl.querySelectorAll('form[action*="/status"], div.d-flex.gap-1');
+      if (actionContainers.length > 0) {
+        const lastAction = actionContainers[actionContainers.length - 1];
+        let newHtml = '';
+        if (status === 'TODO') {
+          newHtml = `
+            <form action="/schedules/${scheduleId}/status" method="POST" class="m-0">
+              <input type="hidden" name="status" value="IN_PROGRESS">
+              <button type="submit" class="btn btn-outline-primary btn-sm w-100 fw-semibold">
+                진행 시작 <i class="bi bi-arrow-right"></i>
+              </button>
+            </form>
+          `;
+        } else if (status === 'IN_PROGRESS') {
+          newHtml = `
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-outline-primary btn-sm flex-fill" onclick="selectPomodoroSchedule('${scheduleId}', '${escapedTitle}')">
+                <i class="bi bi-stopwatch"></i> 집중
+              </button>
+              <form action="/schedules/${scheduleId}/status" method="POST" class="m-0 flex-fill">
+                <input type="hidden" name="status" value="DONE">
+                <button type="submit" class="btn btn-success btn-sm w-100 fw-semibold">
+                  <i class="bi bi-check-lg"></i> 완료
+                </button>
+              </form>
+            </div>
+          `;
+        } else if (status === 'DONE') {
+          newHtml = `
+            <form action="/schedules/${scheduleId}/status" method="POST" class="m-0">
+              <input type="hidden" name="status" value="TODO">
+              <button type="submit" class="btn btn-outline-secondary btn-sm w-100 py-0" style="font-size: 0.75rem;">
+                <i class="bi bi-arrow-counterclockwise"></i> TODO로 되돌리기
+              </button>
+            </form>
+          `;
+        }
+
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = newHtml.trim();
+        if (tempDiv.firstElementChild) {
+          lastAction.replaceWith(tempDiv.firstElementChild);
+        }
+      }
+    }
+
+    function updatePersonalKanbanCounts() {
+      const personalCols = document.querySelectorAll('#kanbanView .kanban-column, #kanbanView .kanban-col');
+      personalCols.forEach(col => {
+        const badge = col.querySelector('.kanban-col-header .badge');
+        const cards = col.querySelectorAll('.kanban-cards .kanban-card');
+        if (badge) {
+          badge.textContent = cards.length;
+        }
+      });
+    }
+
+    // ==========================================
+    // Synchronize Kanban Board DOM when Status changed outside Kanban (stastics.md 3번)
+    // ==========================================
+    function syncScheduleStatusInKanban(scheduleId, newStatus) {
+      const card = document.querySelector(`#kanbanView .kanban-card[data-drag-id="${scheduleId}"]`);
+      if (!card) return;
+
+      const destCol = document.querySelector(`#kanbanView .kanban-col[data-status="${newStatus}"]`);
+      if (destCol) {
+        const destCardsContainer = destCol.querySelector('.kanban-cards');
+        if (destCardsContainer && card.parentElement !== destCardsContainer) {
+          destCardsContainer.appendChild(card);
+        }
+      }
+
+      card.setAttribute('data-current-status', newStatus);
+
+      const titleEl = card.querySelector('h6');
+      if (titleEl) {
+        if (newStatus === 'DONE') {
+          card.classList.add('done-card');
+          card.classList.remove('border-primary', 'border-opacity-25');
+          titleEl.classList.add('text-decoration-line-through', 'text-muted');
+          titleEl.classList.remove('text-dark');
+        } else if (newStatus === 'IN_PROGRESS') {
+          card.classList.remove('done-card');
+          card.classList.add('border-primary', 'border-opacity-25');
+          titleEl.classList.remove('text-decoration-line-through', 'text-muted');
+          titleEl.classList.add('text-dark');
+        } else {
+          card.classList.remove('done-card', 'border-primary', 'border-opacity-25');
+          titleEl.classList.remove('text-decoration-line-through', 'text-muted');
+          titleEl.classList.add('text-dark');
+        }
+      }
+
+      if (typeof updatePersonalCardActionButtons === 'function') {
+        updatePersonalCardActionButtons(card, scheduleId, newStatus);
+      }
+      if (typeof updatePersonalKanbanCounts === 'function') {
+        updatePersonalKanbanCounts();
+      }
+    }
+    window.syncScheduleStatusInKanban = syncScheduleStatusInKanban;
+
+    // ==========================================
+    // Subtask Async Handlers (checklist.md 2번)
+    // ==========================================
+    async function addSubtaskAsync(event, scheduleId, formEl) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      const input = formEl.querySelector('input[name="title"]');
+      if (!input || !input.value.trim()) return;
+      const title = input.value.trim();
+
+      try {
+        const res = await fetch(`/schedules/${scheduleId}/subtasks`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ title })
+        });
+        const data = await res.json();
+        if (data && data.success) {
+          input.value = '';
+          updateSubtasksDOM(scheduleId, data);
+        } else {
+          if (typeof showAlert === 'function') showAlert((data && data.error) || '하위 할 일 추가에 실패했습니다.');
+          else alert((data && data.error) || '하위 할 일 추가에 실패했습니다.');
+        }
+      } catch (err) {
+        console.error('addSubtaskAsync error:', err);
+        if (typeof showAlert === 'function') showAlert('통신 오류가 발생했습니다.');
+      }
+    }
+    window.addSubtaskAsync = addSubtaskAsync;
+
+    async function toggleSubtaskAsync(event, subtaskId, scheduleId) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      try {
+        const res = await fetch(`/subtasks/${subtaskId}/toggle`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+        const data = await res.json();
+        if (data && data.success) {
+          updateSubtasksDOM(scheduleId, data, subtaskId, 'toggle');
+        } else {
+          if (typeof showAlert === 'function') showAlert((data && data.error) || '상태 변경에 실패했습니다.');
+        }
+      } catch (err) {
+        console.error('toggleSubtaskAsync error:', err);
+        if (typeof showAlert === 'function') showAlert('통신 오류가 발생했습니다.');
+      }
+    }
+    window.toggleSubtaskAsync = toggleSubtaskAsync;
+
+    async function deleteSubtaskAsync(event, subtaskId, scheduleId) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      try {
+        const res = await fetch(`/subtasks/${subtaskId}/delete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+        const data = await res.json();
+        if (data && data.success) {
+          updateSubtasksDOM(scheduleId, data, subtaskId, 'delete');
+        } else {
+          if (typeof showAlert === 'function') showAlert((data && data.error) || '삭제에 실패했습니다.');
+        }
+      } catch (err) {
+        console.error('deleteSubtaskAsync error:', err);
+        if (typeof showAlert === 'function') showAlert('통신 오류가 발생했습니다.');
+      }
+    }
+    window.deleteSubtaskAsync = deleteSubtaskAsync;
+
+    function splitSubtasksAi(scheduleId) {
+      const f = document.createElement('form');
+      f.method = 'POST';
+      f.action = `/schedules/${scheduleId}/subtasks/ai-split`;
+      document.body.appendChild(f);
+      f.submit();
+    }
+    window.splitSubtasksAi = splitSubtasksAi;
+
+    function updateSubtasksDOM(scheduleId, data, subtaskId, action) {
+      const containers = document.querySelectorAll(`.subtasks-container[data-schedule-id="${scheduleId}"]`);
+      containers.forEach(container => {
+        // 1. 진행률 텍스트 및 프로그레스 바 갱신
+        const percentText = container.querySelector('.subtask-percent-text');
+        if (percentText) percentText.textContent = `${data.progressPercent}%`;
+
+        const countText = container.querySelector('.subtask-count-text');
+        if (countText) {
+          countText.textContent = `${data.completedSubtasks}/${data.totalSubtasks} (${data.progressPercent}%)`;
+        }
+
+        const bar = container.querySelector('.subtask-progress-bar');
+        if (bar) bar.style.width = `${data.progressPercent}%`;
+
+        const list = container.querySelector('.subtask-list');
+        if (!list) return;
+
+        // 2. 항목 추가인 경우
+        if (data.subtask && !action) {
+          const st = data.subtask;
+          const li = document.createElement('li');
+          li.className = `subtask-item ${st.is_done ? 'done' : ''}`;
+          li.setAttribute('data-subtask-id', st.id);
+          li.innerHTML = `
+            <button type="button" class="btn btn-link p-0 text-decoration-none text-dark d-flex align-items-center gap-1 text-start flex-grow-1" style="font-size: 0.8rem;" onclick="toggleSubtaskAsync(event, ${st.id}, ${scheduleId})">
+              <i class="bi ${st.is_done ? 'bi-check-square-fill text-success' : 'bi-square text-secondary'}"></i>
+              <span class="text-truncate" style="max-width: 140px;">${escapeHtml(st.title)}</span>
+            </button>
+            <button type="button" class="subtask-delete-btn" onclick="deleteSubtaskAsync(event, ${st.id}, ${scheduleId})" title="하위 할 일 삭제">
+              <i class="bi bi-x"></i>
+            </button>
+          `;
+          list.appendChild(li);
+        }
+
+        // 3. 토글인 경우
+        if (action === 'toggle' && subtaskId) {
+          const li = list.querySelector(`li[data-subtask-id="${subtaskId}"]`);
+          if (li) {
+            if (data.is_done === 1) {
+              li.classList.add('done');
+              const icon = li.querySelector('i.bi');
+              if (icon) {
+                icon.className = 'bi bi-check-square-fill text-success';
+              }
+            } else {
+              li.classList.remove('done');
+              const icon = li.querySelector('i.bi');
+              if (icon) {
+                icon.className = 'bi bi-square text-secondary';
+              }
+            }
+          }
+        }
+
+        // 4. 삭제인 경우
+        if (action === 'delete' && subtaskId) {
+          const li = list.querySelector(`li[data-subtask-id="${subtaskId}"]`);
+          if (li) {
+            li.remove();
+          }
+        }
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // ==========================================
+    // Calendar Mode Async Form Handler (stastics.md 3번)
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', () => {
+      const editForm = document.getElementById('editScheduleForm');
+      if (editForm) {
+        editForm.addEventListener('submit', async function(e) {
+          const calTab = document.getElementById('calendar-tab');
+          const isCalendarActive = calTab && calTab.classList.contains('active');
+
+          if (isCalendarActive) {
+            e.preventDefault();
+            const formData = new FormData(editForm);
+            const bodyObj = {
+              title: formData.get('title'),
+              due_datetime: formData.get('due_datetime'),
+              category: formData.get('category'),
+              description: formData.get('description'),
+              status: formData.get('status'),
+              is_top3: formData.get('is_top3') ? '1' : '0',
+              is_important: formData.get('is_important') ? '1' : '0'
+            };
+            const scheduleId = editForm.getAttribute('data-schedule-id');
+
+            try {
+              const res = await fetch(editForm.action, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+                },
+                body: JSON.stringify(bodyObj)
+              });
+              const data = await res.json();
+              if (data && data.success) {
+                // 1. 모달 닫기
+                const modalEl = document.getElementById('editScheduleModal');
+                const m = bootstrap.Modal.getInstance(modalEl);
+                if (m) m.hide();
+
+                // 2. userSchedules 전역 데이터 갱신
+                if (typeof userSchedules !== 'undefined' && data.schedule) {
+                  const target = userSchedules.find(x => String(x.id) === String(scheduleId));
+                  if (target) {
+                    Object.assign(target, data.schedule);
+                  }
+                }
+
+                // 3. 캘린더 실시간 갱신 (탭 유지!)
+                if (typeof renderCalendar === 'function') {
+                  renderCalendar();
+                }
+
+                // 4. 칸반 보드 백그라운드 동기화
+                if (bodyObj.status && typeof syncScheduleStatusInKanban === 'function') {
+                  syncScheduleStatusInKanban(scheduleId, bodyObj.status);
+                }
+
+                // 5. 생산성 통계 도넛 차트 갱신
+                if (typeof refreshProductivityStats === 'function') {
+                  refreshProductivityStats(data.stats);
+                }
+
+                if (typeof showAlert === 'function') {
+                  showAlert('일정이 수정되었습니다.');
+                }
+              } else {
+                if (typeof showAlert === 'function') {
+                  showAlert((data && data.error) || '일정 수정에 실패했습니다.');
+                }
+              }
+            } catch (err) {
+              console.error('Edit schedule async error:', err);
+              if (typeof showAlert === 'function') {
+                showAlert('일정 수정 중 통신 오류가 발생했습니다.');
+              }
+            }
+          }
+        });
+      }
+    });
+  </script>
+  <%- include('partials/mini-timer') %>
+</body>
+</html>

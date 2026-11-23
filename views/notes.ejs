@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>세부사항 / 문서함 - WorkSmarter</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <!-- ========================================== -->
+    <!-- 1. Notion-Style Left Fixed Sidebar         -->
+    <!-- ========================================== -->
+    <aside class="notion-sidebar" id="appSidebar">
+      <!-- Sidebar Brand -->
+      <div class="sidebar-brand-box d-flex align-items-center justify-content-between">
+        <a href="/" class="navbar-brand-custom text-decoration-none">
+          <i class="bi bi-calendar2-check-fill text-primary"></i>
+          <span>WorkSmarter</span>
+        </a>
+        <button class="btn btn-sm btn-light" type="button" onclick="toggleSidebarCollapse()" title="사이드바 접기/펼치기">
+          <i class="bi bi-list"></i>
+        </button>
+      </div>
+
+      <!-- User Profile Box -->
+      <div class="sidebar-user-box d-flex align-items-center gap-2">
+        <div class="sidebar-avatar">
+          <%= user.name.charAt(0) %>
+        </div>
+        <div class="overflow-hidden">
+          <div class="fw-bold small text-truncate"><%= user.name %></div>
+          <div class="text-muted smaller text-truncate">@<%= user.username %> · <span class="badge bg-light text-secondary border py-0 px-1"><%= user.role %></span></div>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <div class="p-2 flex-grow-1">
+        <div class="sidebar-section-title">개인 워크스페이스</div>
+        <a href="/" class="sidebar-link <%= activeMenu === 'dashboard' ? 'active' : '' %>">
+          <i class="bi bi-speedometer2"></i>
+          <span>내 대시보드</span>
+        </a>
+        <a href="/notes" class="sidebar-link <%= activeMenu === 'notes' ? 'active' : '' %>">
+          <i class="bi bi-file-earmark-text"></i>
+          <span>세부사항 / 문서함</span>
+        </a>
+        <a href="/mypage" class="sidebar-link <%= activeMenu === 'mypage' ? 'active' : '' %>">
+          <i class="bi bi-person-gear"></i>
+          <span>마이페이지</span>
+        </a>
+
+        <div class="sidebar-section-title pt-3">팀 협업 공간</div>
+        <a href="/teams" class="sidebar-link <%= activeMenu === 'teams' ? 'active' : '' %>">
+          <i class="bi bi-people-fill text-primary"></i>
+          <span>팀 워크스페이스</span>
+          <span class="badge bg-primary text-white ms-auto rounded-pill px-2">Team</span>
+        </a>
+
+        <% if (user.role === 'ADMIN') { %>
+          <div class="sidebar-section-title pt-3">시스템 관제</div>
+          <a href="/admin" class="sidebar-link <%= activeMenu === 'admin' ? 'active' : '' %>">
+            <i class="bi bi-shield-lock-fill text-warning"></i>
+            <span>관리자 콘솔</span>
+          </a>
+        <% } %>
+      </div>
+
+      <!-- Sidebar Footer (Logout) -->
+      <div class="sidebar-footer">
+        <a href="/logout" class="btn btn-outline-danger btn-sm w-100 d-flex align-items-center justify-content-center gap-2">
+          <i class="bi bi-box-arrow-right"></i>
+          <span>로그아웃</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Mobile Backdrop -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebarCollapse()"></div>
+
+    <!-- ========================================== -->
+    <!-- 2. Main Content Area                       -->
+    <!-- ========================================== -->
+    <div class="app-main-content">
+      <!-- Top Mobile & Status Bar -->
+      <header class="d-flex align-items-center justify-content-between px-4 py-2 border-bottom bg-white sticky-top">
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button" onclick="toggleSidebarCollapse()" title="사이드바 접기/펼치기">
+            <i class="bi bi-list fs-5"></i>
+          </button>
+          <span class="fw-bold text-dark fs-6 d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-text text-primary"></i> 세부사항 / 문서함
+          </span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-light text-dark border px-2 py-1 fw-normal">
+            <i class="bi bi-person-fill text-primary me-1"></i>
+            <strong><%= user.name %></strong> (<%= user.username %>)
+          </span>
+        </div>
+      </header>
+
+      <!-- Main Container -->
+      <main class="container-fluid p-4">
+        
+        <!-- Header Action Card -->
+        <div class="card card-custom mb-4">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+              <div>
+                <h5 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                  <i class="bi bi-journal-text text-primary"></i>
+                  <span>문서 & 메모 보관함</span>
+                  <span class="badge bg-primary-subtle text-primary rounded-pill small" id="notesTotalCountBadge"><%= notes.length %>개</span>
+                </h5>
+                <p class="text-secondary small mb-0">일정과 연계된 세부 문서, 참고 링크 및 경량 파일을 체계적으로 관리하세요.</p>
+              </div>
+
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <!-- Search Box -->
+                <div class="input-group input-group-sm" style="max-width: 240px;">
+                  <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                  <input type="text" id="noteSearchInput" class="form-control border-start-0 bg-light" placeholder="문서 제목, 본문 검색..." oninput="filterNotes()">
+                </div>
+
+                <!-- Filter Select -->
+                <select id="noteFilterSelect" class="form-select form-select-sm" style="width: auto;" onchange="filterNotes()">
+                  <option value="ALL" selected>전체 보기</option>
+                  <option value="PERSONAL">개인 일정 연결됨</option>
+                  <option value="TEAM">팀 일정 연결됨</option>
+                  <option value="NONE">미연결 문서</option>
+                </select>
+
+                <!-- Create New Note Button -->
+                <button type="button" class="btn btn-primary btn-sm fw-semibold d-flex align-items-center gap-1" onclick="createNewNote()">
+                  <i class="bi bi-plus-lg"></i>
+                  <span>새 문서/메모 작성</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes Card Grid -->
+        <div class="row g-3" id="notesGridContainer">
+          <% if (notes.length === 0) { %>
+            <div class="col-12" id="noNotesPlaceholder">
+              <div class="card card-custom text-center py-5">
+                <div class="card-body">
+                  <i class="bi bi-journal-plus fs-1 text-muted opacity-50 mb-3 d-block"></i>
+                  <h6 class="fw-bold text-dark mb-1">작성된 문서나 메모가 없습니다.</h6>
+                  <p class="text-muted small mb-3">새 문서를 작성하고 일정과 연결하여 관련 자료를 한곳에 보관해 보세요.</p>
+                  <button type="button" class="btn btn-primary btn-sm fw-semibold" onclick="createNewNote()">
+                    <i class="bi bi-plus-lg me-1"></i> 새 문서/메모 작성하기
+                  </button>
+                </div>
+              </div>
+            </div>
+          <% } else { %>
+            <% notes.forEach(n => { %>
+              <div class="col-md-6 col-xl-4 note-card-col" 
+                   data-note-id="<%= n.id %>" 
+                   data-linked-type="<%= n.linked_type %>" 
+                   data-title="<%= n.title.toLowerCase() %>" 
+                   data-content="<%= (n.content || '').toLowerCase() %>">
+                <div class="card card-custom note-grid-card h-100 shadow-sm" onclick="openNoteDrawer(<%= n.id %>)" style="cursor: pointer;">
+                  <div class="card-body p-3 d-flex flex-column justify-content-between">
+                    <div>
+                      <!-- Card Header Badge & Actions -->
+                      <div class="d-flex align-items-center justify-content-between gap-1 mb-2">
+                        <div class="note-link-tag-wrapper text-truncate">
+                          <% if (n.linked_type === 'PERSONAL') { %>
+                            <span class="badge bg-primary-subtle text-primary border" title="연결된 개인 일정: <%= n.linkedTitle || '' %>">
+                              <i class="bi bi-person me-1"></i>[개인] <%= n.linkedTitle || '개인 일정' %>
+                            </span>
+                          <% } else if (n.linked_type === 'TEAM') { %>
+                            <span class="badge bg-info-subtle text-info-emphasis border" title="연결된 팀 일정: [<%= n.linkedTeamName || '팀' %>] <%= n.linkedTitle || '' %>">
+                              <i class="bi bi-people me-1"></i>[팀: <%= n.linkedTeamName || '소속 팀' %>] <%= n.linkedTitle || '팀 일정' %>
+                            </span>
+                          <% } else { %>
+                            <span class="badge bg-light text-muted border">미연결</span>
+                          <% } %>
+                        </div>
+
+                        <div class="dropdown" onclick="event.stopPropagation()">
+                          <button class="btn btn-link btn-sm text-muted p-0" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical"></i>
+                          </button>
+                          <ul class="dropdown-menu dropdown-menu-end shadow-sm small">
+                            <li>
+                              <button class="dropdown-item text-danger" type="button" onclick="deleteNoteById(event, <%= n.id %>)">
+                                <i class="bi bi-trash me-1"></i> 문서 삭제
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      <!-- Title -->
+                      <h6 class="fw-bold text-dark mb-1 text-truncate note-card-title" title="<%= n.title %>">
+                        <%= n.title %>
+                      </h6>
+
+                      <!-- Content Snippet -->
+                      <p class="text-secondary small mb-3 note-card-snippet preserve-lines" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; min-height: 48px;">
+                        <%= (n.content && n.content.trim()) ? n.content.trim() : '내용 없음' %>
+                      </p>
+                    </div>
+
+                    <!-- Footer Meta -->
+                    <div class="d-flex align-items-center justify-content-between pt-2 border-top text-muted smaller">
+                      <div class="d-flex align-items-center gap-2">
+                        <% if (n.links && n.links.length > 0) { %>
+                          <span class="d-inline-flex align-items-center gap-1" title="링크 <%= n.links.length %>개">
+                            <i class="bi bi-link-45deg text-primary"></i><%= n.links.length %>
+                          </span>
+                        <% } %>
+                        <% if (n.attachments && n.attachments.length > 0) { %>
+                          <span class="d-inline-flex align-items-center gap-1" title="첨부파일 <%= n.attachments.length %>개">
+                            <i class="bi bi-paperclip text-secondary"></i><%= n.attachments.length %>
+                          </span>
+                        <% } %>
+                      </div>
+
+                      <div class="text-secondary note-card-updated-at">
+                        <i class="bi bi-clock me-1"></i><%= (n.updated_at || n.created_at || '').slice(0, 16).replace('T', ' ') %>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            <% }); %>
+          <% } %>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 3. Side Drawer / Editing Detail Panel      -->
+  <!-- ========================================== -->
+  <div class="notion-drawer-backdrop" id="drawerBackdrop" onclick="closeNoteDrawer()"></div>
+  <aside class="notion-note-drawer shadow-lg" id="noteDrawer">
+    <!-- Drawer Header -->
+    <div class="d-flex align-items-center justify-content-between p-3 border-bottom bg-white sticky-top">
+      <div class="d-flex align-items-center gap-2">
+        <span id="drawerSaveStatus" class="badge bg-success-subtle text-success border">
+          저장됨 ✓
+        </span>
+        <span class="smaller text-muted d-none d-sm-inline" id="drawerLastSavedText"></span>
+      </div>
+
+      <div class="d-flex align-items-center gap-1">
+        <button type="button" class="btn btn-outline-danger btn-sm py-1 px-2" onclick="deleteCurrentNote()" title="문서 삭제">
+          <i class="bi bi-trash"></i>
+        </button>
+        <button type="button" class="btn btn-light btn-sm py-1 px-2" onclick="closeNoteDrawer()" title="패널 닫기">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Drawer Body -->
+    <div class="p-4 overflow-y-auto" style="height: calc(100vh - 65px);">
+      
+      <!-- 1. Schedule Tag (Link) Section -->
+      <div class="mb-3 p-2 bg-light rounded border">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <label class="form-label smaller fw-bold text-secondary mb-0">
+            <i class="bi bi-tag-fill text-primary me-1"></i>일정 태그(연결)
+          </label>
+          <span class="smaller text-muted">문서와 관련된 일정을 선택하세요</span>
+        </div>
+        <select id="drawerScheduleSelect" class="form-select form-select-sm" onchange="onScheduleTagChange()">
+          <option value="NONE:0">🔗 연결 안 함 (독립 문서)</option>
+          <% if (personalSchedules && personalSchedules.length > 0) { %>
+            <optgroup label="── 내 개인 일정 ──">
+              <% personalSchedules.forEach(ps => { %>
+                <option value="PERSONAL:<%= ps.id %>">[개인] <%= ps.title %> <%= ps.due_datetime ? '(' + ps.due_datetime + ')' : '(상시)' %></option>
+              <% }); %>
+            </optgroup>
+          <% } %>
+          <% if (teamSchedules && teamSchedules.length > 0) { %>
+            <optgroup label="── 소속 팀 일정 ──">
+              <% teamSchedules.forEach(ts => { %>
+                <option value="TEAM:<%= ts.id %>">[팀: <%= ts.team_name %>] <%= ts.title %> <%= ts.due_datetime ? '(' + ts.due_datetime + ')' : '(상시)' %></option>
+              <% }); %>
+            </optgroup>
+          <% } %>
+        </select>
+      </div>
+
+      <!-- 2. Note Title Input -->
+      <div class="mb-3">
+        <input type="text" id="drawerTitleInput" class="form-control form-control-lg fw-bold border-0 px-0 fs-4 note-title-input" placeholder="제목 없는 문서" oninput="onNoteInput()">
+      </div>
+
+      <!-- 3. Editor & Preview Tab Pills -->
+      <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+        <ul class="nav nav-pills gap-1" id="drawerContentTabs" role="tablist">
+          <li class="nav-item">
+            <button class="nav-link active py-1 px-3 fw-semibold smaller" id="editorTabBtn" type="button" onclick="switchDrawerContentTab('edit')">
+              <i class="bi bi-pencil me-1"></i>편집
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link py-1 px-3 fw-semibold smaller" id="previewTabBtn" type="button" onclick="switchDrawerContentTab('preview')" title="본문 속 웹 주소(URL)를 클릭 가능한 하이퍼링크로 변환하여 미리봅니다">
+              <i class="bi bi-eye me-1"></i>미리보기 <span class="badge bg-secondary-subtle text-secondary fw-normal smaller ms-1">링크 변환</span>
+            </button>
+          </li>
+        </ul>
+        <span class="smaller text-muted">입력 중단 1초 후 자동 저장</span>
+      </div>
+
+      <!-- 4. Content Area -->
+      <div class="mb-4">
+        <!-- Edit Area -->
+        <div id="drawerEditPane">
+          <textarea id="drawerContentTextarea" class="form-control border-0 px-0 note-content-textarea" rows="11" placeholder="내용을 자유롭게 입력하세요... (본문 내 작성한 http://, https://, www. 웹 링크는 [미리보기] 탭에서 클릭 가능한 링크로 자동 변환됩니다)" oninput="onNoteInput()"></textarea>
+        </div>
+        <!-- Preview Area -->
+        <div id="drawerPreviewPane" class="p-3 bg-light rounded border note-preview-pane d-none" style="min-height: 250px;">
+          <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+            <span class="smaller text-muted"><i class="bi bi-info-circle me-1"></i>본문 읽기 미리보기 (웹 주소 클릭 가능)</span>
+            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 smaller text-primary" onclick="switchDrawerContentTab('edit')">
+              <i class="bi bi-pencil me-1"></i>다시 편집하기
+            </button>
+          </div>
+          <div id="drawerPreviewContent" class="small preserve-lines text-dark"></div>
+        </div>
+      </div>
+
+      <!-- 5. Reference Links Section -->
+      <div class="card border mb-4">
+        <div class="card-header bg-light py-2 px-3 d-flex align-items-center justify-content-between">
+          <span class="fw-bold small text-dark d-flex align-items-center gap-1">
+            <i class="bi bi-link-45deg text-primary fs-5"></i>
+            <span>참고 링크</span>
+            <span class="badge bg-secondary-subtle text-secondary rounded-pill smaller" id="drawerLinksCount">0</span>
+          </span>
+          <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 fw-semibold" onclick="openAddLinkModal()">
+            <i class="bi bi-plus-lg me-1"></i>참고 링크 추가
+          </button>
+        </div>
+        <div class="card-body p-3">
+          <div class="d-flex flex-wrap gap-2" id="drawerLinksContainer">
+            <!-- Rendered by JS -->
+          </div>
+          <div id="drawerLinksEmptyNotice" class="text-muted smaller text-center py-2">
+            등록된 참고 링크가 없습니다.
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Light File Attachments Section (Multer 5MB) -->
+      <div class="card border mb-3">
+        <div class="card-header bg-light py-2 px-3 d-flex align-items-center justify-content-between">
+          <div>
+            <span class="fw-bold small text-dark d-flex align-items-center gap-1">
+              <i class="bi bi-paperclip text-primary fs-6"></i>
+              <span>경량 문서 파일 첨부</span>
+              <span class="badge bg-secondary-subtle text-secondary rounded-pill smaller" id="drawerAttachmentsCount">0</span>
+            </span>
+          </div>
+          <div>
+            <input type="file" id="noteAttachmentFileInput" class="d-none" accept=".pdf,.png,.jpg,.jpeg,.txt,.md,.docx,.xlsx,.zip" onchange="handleAttachmentUpload(event)">
+            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" onclick="document.getElementById('noteAttachmentFileInput').click()">
+              <i class="bi bi-upload me-1"></i>파일 첨부 (최대 5MB)
+            </button>
+          </div>
+        </div>
+        <div class="card-body p-3">
+          <div class="smaller text-muted mb-2">
+            <i class="bi bi-info-circle me-1"></i>허용 확장자: PDF, PNG, JPG, JPEG, TXT, MD, DOCX, XLSX, ZIP (개별 최대 5MB)
+          </div>
+
+          <!-- Attachments Container -->
+          <div class="d-flex flex-column gap-2" id="drawerAttachmentsContainer">
+            <!-- Rendered by JS -->
+          </div>
+
+          <div id="drawerAttachmentsEmptyNotice" class="text-muted smaller text-center py-2">
+            첨부된 파일이 없습니다.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- ========================================== -->
+  <!-- 4. Add Link Modal                          -->
+  <!-- ========================================== -->
+  <div class="modal fade" id="addLinkModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-header py-2">
+          <h6 class="modal-title fw-bold">
+            <i class="bi bi-link-45deg text-primary me-1"></i>참고 링크 추가
+          </h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-3">
+          <div class="mb-2">
+            <label class="form-label smaller fw-semibold text-secondary mb-1">URL 주소 *</label>
+            <input type="url" id="newLinkUrl" class="form-control form-control-sm" placeholder="https://example.com" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label smaller fw-semibold text-secondary mb-1">링크 제목 / 라벨 (선택)</label>
+            <input type="text" id="newLinkLabel" class="form-control form-control-sm" placeholder="예: 개발 문서, 기획안 초안">
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary btn-sm fw-semibold" onclick="confirmAddLink()">추가하기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Notes Client-side Application Script -->
+  <script>
+    // Global notes memory & active state
+    let activeNote = null;
+    let autosaveTimer = null;
+    const openNoteIdOnLoad = <%= openNoteId ? openNoteId : 'null' %>;
+
+    // Mobile Sidebar Toggle
+    function toggleSidebarCollapse() {
+      const sidebar = document.getElementById('appSidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      if (sidebar && backdrop) {
+        sidebar.classList.toggle('show');
+        backdrop.classList.toggle('show');
+      }
+    }
+
+    // Filter Notes by Search and Category
+    function filterNotes() {
+      const q = (document.getElementById('noteSearchInput').value || '').trim().toLowerCase();
+      const filter = document.getElementById('noteFilterSelect').value;
+      const cols = document.querySelectorAll('.note-card-col');
+
+      let visibleCount = 0;
+      cols.forEach(col => {
+        const title = col.getAttribute('data-title') || '';
+        const content = col.getAttribute('data-content') || '';
+        const linkedType = col.getAttribute('data-linked-type') || 'NONE';
+
+        const matchesQuery = (!q || title.includes(q) || content.includes(q));
+        const matchesFilter = (filter === 'ALL' || linkedType === filter);
+
+        if (matchesQuery && matchesFilter) {
+          col.style.display = '';
+          visibleCount++;
+        } else {
+          col.style.display = 'none';
+        }
+      });
+
+      const placeholder = document.getElementById('noNotesPlaceholder');
+      if (placeholder) {
+        placeholder.style.display = visibleCount === 0 ? '' : 'none';
+      }
+    }
+
+    // Create New Note
+    async function createNewNote() {
+      try {
+        const res = await fetch('/api/notes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            title: '새 문서',
+            content: '',
+            linked_type: 'NONE'
+          })
+        });
+        const data = await res.json();
+        if (data.success && data.note) {
+          // Open newly created note drawer immediately
+          window.location.href = `/notes?noteId=${data.note.id}`;
+        } else {
+          if (typeof showAlert === 'function') {
+            showAlert(data.error || '문서 생성에 실패했습니다.');
+          }
+        }
+      } catch (err) {
+        if (typeof showAlert === 'function') {
+          showAlert('문서 생성 중 통신 오류가 발생했습니다.');
+        }
+      }
+    }
+
+    // Open Drawer for a specific note
+    async function openNoteDrawer(noteId) {
+      try {
+        const res = await fetch(`/api/notes/${noteId}`);
+        const data = await res.json();
+        if (!data.success || !data.note) {
+          if (typeof showAlert === 'function') showAlert(data.error || '문서를 불러올 수 없습니다.');
+          return;
+        }
+
+        activeNote = data.note;
+        populateDrawer(activeNote);
+
+        document.getElementById('noteDrawer').classList.add('open');
+        document.getElementById('drawerBackdrop').classList.add('show');
+      } catch (err) {
+        if (typeof showAlert === 'function') showAlert('문서를 불러오는 중 오류가 발생했습니다.');
+      }
+    }
+
+    // Close Drawer
+    function closeNoteDrawer() {
+      document.getElementById('noteDrawer').classList.remove('open');
+      document.getElementById('drawerBackdrop').classList.remove('show');
+      // If there's an ongoing autosave timer, execute immediately
+      if (autosaveTimer) {
+        clearTimeout(autosaveTimer);
+        executeAutosave();
+      }
+      activeNote = null;
+    }
+
+    // Populate drawer with note data
+    function populateDrawer(note) {
+      document.getElementById('drawerTitleInput').value = note.title || '';
+      document.getElementById('drawerContentTextarea').value = note.content || '';
+
+      const selectVal = `${note.linked_type || 'NONE'}:${note.linked_schedule_id || 0}`;
+      const selectEl = document.getElementById('drawerScheduleSelect');
+      if (selectEl) {
+        selectEl.value = selectVal;
+        if (!selectEl.value) {
+          selectEl.value = 'NONE:0';
+        }
+      }
+
+      setDrawerSaveStatus('SAVED');
+      switchDrawerContentTab('edit');
+
+      renderDrawerLinks(note.links || []);
+      renderDrawerAttachments(note.attachments || []);
+    }
+
+    // Switch Editor / Preview Tabs
+    function switchDrawerContentTab(mode) {
+      const editBtn = document.getElementById('editorTabBtn');
+      const prevBtn = document.getElementById('previewTabBtn');
+      const editPane = document.getElementById('drawerEditPane');
+      const prevPane = document.getElementById('drawerPreviewPane');
+      const prevContent = document.getElementById('drawerPreviewContent');
+
+      if (mode === 'preview') {
+        editBtn.classList.remove('active');
+        prevBtn.classList.add('active');
+        editPane.classList.add('d-none');
+        prevPane.classList.remove('d-none');
+
+        const rawText = document.getElementById('drawerContentTextarea').value;
+        prevContent.innerHTML = formatContentWithLinks(rawText);
+      } else {
+        editBtn.classList.add('active');
+        prevBtn.classList.remove('active');
+        editPane.classList.remove('d-none');
+        prevPane.classList.add('d-none');
+      }
+    }
+
+    // Auto-linkify URLs with XSS escape
+    function formatContentWithLinks(text) {
+      if (!text || !text.trim()) {
+        return '<span class="text-muted smaller"><i class="bi bi-chat-left-text me-1"></i>작성된 본문 내용이 없습니다. [편집] 탭에서 내용을 작성해 보세요.</span>';
+      }
+      // 1. Safe HTML Entity Escaping
+      const escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+      // 2. Linkify URLs (supports both https?:// and www.)
+      const urlRegex = /((https?:\/\/|www\.)[^\s<]+)/gi;
+      const linked = escaped.replace(urlRegex, function(match) {
+        const href = match.toLowerCase().startsWith('www.') ? 'https://' + match : match;
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-primary text-decoration-underline fw-semibold d-inline-flex align-items-center gap-1"><i class="bi bi-box-arrow-up-right smaller"></i>${match}</a>`;
+      });
+
+      return linked;
+    }
+
+    // Trigger Debounce Autosave (1000ms delay)
+    function onNoteInput() {
+      setDrawerSaveStatus('SAVING');
+      clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(executeAutosave, 1000);
+    }
+
+    function onScheduleTagChange() {
+      setDrawerSaveStatus('SAVING');
+      clearTimeout(autosaveTimer);
+      executeAutosave();
+    }
+
+    // Execute Autosave via POST /api/notes/:id/autosave
+    async function executeAutosave() {
+      if (!activeNote || !activeNote.id) return;
+
+      const title = document.getElementById('drawerTitleInput').value.trim() || '제목 없는 문서';
+      const content = document.getElementById('drawerContentTextarea').value;
+      const [linked_type, linked_schedule_id] = document.getElementById('drawerScheduleSelect').value.split(':');
+
+      try {
+        const res = await fetch(`/api/notes/${activeNote.id}/autosave`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            title,
+            content,
+            linked_type: linked_type || 'NONE',
+            linked_schedule_id: linked_schedule_id !== '0' ? linked_schedule_id : null,
+            links_json: activeNote.links || []
+          })
+        });
+
+        const data = await res.json();
+        if (data.success && data.note) {
+          activeNote.title = data.note.title;
+          activeNote.content = data.note.content;
+          activeNote.linked_type = data.note.linked_type;
+          activeNote.linked_schedule_id = data.note.linked_schedule_id;
+          activeNote.updated_at = data.note.updated_at;
+
+          setDrawerSaveStatus('SAVED', data.updated_at);
+          updateCardInGrid(data.note);
+        } else {
+          setDrawerSaveStatus('ERROR');
+        }
+      } catch (err) {
+        setDrawerSaveStatus('ERROR');
+      }
+    }
+
+    function setDrawerSaveStatus(status, timeStr) {
+      const badge = document.getElementById('drawerSaveStatus');
+      const text = document.getElementById('drawerLastSavedText');
+      if (!badge) return;
+
+      if (status === 'SAVING') {
+        badge.className = 'badge bg-warning-subtle text-warning-emphasis border';
+        badge.innerHTML = '<span class="spinner-border spinner-border-sm me-1" style="width: 10px; height: 10px;"></span>저장 중...';
+      } else if (status === 'SAVED') {
+        badge.className = 'badge bg-success-subtle text-success border';
+        badge.textContent = '저장됨 ✓';
+        if (timeStr && text) {
+          text.textContent = `(${timeStr.slice(11, 16)})`;
+        }
+      } else if (status === 'ERROR') {
+        badge.className = 'badge bg-danger-subtle text-danger border';
+        badge.textContent = '저장 실패';
+      }
+    }
+
+    // Update list card in background without page reload
+    function updateCardInGrid(note) {
+      const cardCol = document.querySelector(`.note-card-col[data-note-id="${note.id}"]`);
+      if (!cardCol) return;
+
+      cardCol.setAttribute('data-title', (note.title || '').toLowerCase());
+      cardCol.setAttribute('data-content', (note.content || '').toLowerCase());
+      cardCol.setAttribute('data-linked-type', note.linked_type || 'NONE');
+
+      const titleEl = cardCol.querySelector('.note-card-title');
+      if (titleEl) {
+        titleEl.textContent = note.title;
+        titleEl.title = note.title;
+      }
+
+      const snippetEl = cardCol.querySelector('.note-card-snippet');
+      if (snippetEl) {
+        snippetEl.textContent = (note.content && note.content.trim()) ? note.content.trim() : '내용 없음';
+      }
+
+      const timeEl = cardCol.querySelector('.note-card-updated-at');
+      if (timeEl && note.updated_at) {
+        timeEl.innerHTML = `<i class="bi bi-clock me-1"></i>${note.updated_at.slice(0, 16).replace('T', ' ')}`;
+      }
+    }
+
+    // Reference Links Rendering
+    function renderDrawerLinks(links) {
+      const container = document.getElementById('drawerLinksContainer');
+      const emptyNotice = document.getElementById('drawerLinksEmptyNotice');
+      const countBadge = document.getElementById('drawerLinksCount');
+
+      container.innerHTML = '';
+      countBadge.textContent = links.length;
+
+      if (links.length === 0) {
+        emptyNotice.classList.remove('d-none');
+        return;
+      }
+      emptyNotice.classList.add('d-none');
+
+      links.forEach((item, idx) => {
+        let domain = '';
+        try {
+          domain = new URL(item.url).hostname;
+        } catch (e) {
+          domain = item.url;
+        }
+
+        const chip = document.createElement('div');
+        chip.className = 'link-chip d-inline-flex align-items-center gap-2 p-1 px-2 border rounded-pill bg-white shadow-xs';
+        
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+
+        chip.innerHTML = `
+          <img src="${faviconUrl}" alt="" width="16" height="16" class="rounded-circle" onerror="this.src='';this.className='bi bi-link-45deg text-secondary';">
+          <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="text-dark fw-semibold text-decoration-none small text-truncate" style="max-width: 180px;" title="${item.url}">
+            ${item.label || domain}
+          </a>
+          <span class="text-muted smaller">(${domain})</span>
+          <button type="button" class="btn btn-link btn-sm p-0 text-muted ms-1 text-decoration-none" onclick="removeLink(${idx})" title="링크 삭제">
+            <i class="bi bi-x fs-6"></i>
+          </button>
+        `;
+        container.appendChild(chip);
+      });
+    }
+
+    // Open Add Link Modal
+    function openAddLinkModal() {
+      if (!activeNote) return;
+      document.getElementById('newLinkUrl').value = '';
+      document.getElementById('newLinkLabel').value = '';
+      const modal = new bootstrap.Modal(document.getElementById('addLinkModal'));
+      modal.show();
+    }
+
+    // Confirm Add Link
+    async function confirmAddLink() {
+      const urlInput = document.getElementById('newLinkUrl');
+      const labelInput = document.getElementById('newLinkLabel');
+
+      const url = urlInput.value.trim();
+      const label = labelInput.value.trim();
+
+      if (!url) {
+        if (typeof showAlert === 'function') showAlert('URL 주소를 입력해 주세요.');
+        return;
+      }
+
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        if (typeof showAlert === 'function') showAlert('올바른 URL 형식(http:// 또는 https://)으로 입력해 주세요.');
+        return;
+      }
+
+      if (!activeNote.links) activeNote.links = [];
+      activeNote.links.push({ url, label });
+
+      bootstrap.Modal.getInstance(document.getElementById('addLinkModal')).hide();
+      renderDrawerLinks(activeNote.links);
+
+      // Save via API
+      try {
+        const res = await fetch(`/api/notes/${activeNote.id}/links`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ links: activeNote.links })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setDrawerSaveStatus('SAVED');
+        }
+      } catch (err) {
+        setDrawerSaveStatus('ERROR');
+      }
+    }
+
+    // Remove Link
+    async function removeLink(idx) {
+      if (!activeNote || !activeNote.links) return;
+      activeNote.links.splice(idx, 1);
+      renderDrawerLinks(activeNote.links);
+
+      try {
+        const res = await fetch(`/api/notes/${activeNote.id}/links`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ links: activeNote.links })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setDrawerSaveStatus('SAVED');
+        }
+      } catch (err) {
+        setDrawerSaveStatus('ERROR');
+      }
+    }
+
+    // Attachments Rendering
+    function renderDrawerAttachments(attachments) {
+      const container = document.getElementById('drawerAttachmentsContainer');
+      const emptyNotice = document.getElementById('drawerAttachmentsEmptyNotice');
+      const countBadge = document.getElementById('drawerAttachmentsCount');
+
+      container.innerHTML = '';
+      countBadge.textContent = attachments.length;
+
+      if (attachments.length === 0) {
+        emptyNotice.classList.remove('d-none');
+        return;
+      }
+      emptyNotice.classList.add('d-none');
+
+      attachments.forEach(att => {
+        const sizeFormatted = (att.size < 1024 * 1024) 
+          ? (att.size / 1024).toFixed(1) + ' KB' 
+          : (att.size / (1024 * 1024)).toFixed(1) + ' MB';
+
+        let iconClass = 'bi-file-earmark-text text-secondary';
+        const lowerName = (att.originalName || '').toLowerCase();
+        if (lowerName.endsWith('.pdf')) iconClass = 'bi-file-earmark-pdf-fill text-danger';
+        else if (lowerName.match(/\.(png|jpg|jpeg)$/)) iconClass = 'bi-file-earmark-image-fill text-primary';
+        else if (lowerName.endsWith('.zip')) iconClass = 'bi-file-earmark-zip-fill text-warning';
+        else if (lowerName.endsWith('.docx')) iconClass = 'bi-file-earmark-word-fill text-info';
+        else if (lowerName.endsWith('.xlsx')) iconClass = 'bi-file-earmark-excel-fill text-success';
+
+        const row = document.createElement('div');
+        row.className = 'd-flex align-items-center justify-content-between p-2 rounded border bg-white shadow-xs';
+
+        const leftDiv = document.createElement('div');
+        leftDiv.className = 'd-flex align-items-center gap-2 overflow-hidden flex-grow-1 min-w-0';
+
+        const icon = document.createElement('i');
+        icon.className = `bi ${iconClass} fs-5`;
+        leftDiv.appendChild(icon);
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'overflow-hidden';
+
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'fw-semibold small text-truncate text-dark';
+        nameDiv.textContent = att.originalName || '첨부파일';
+        nameDiv.title = att.originalName || '';
+        textDiv.appendChild(nameDiv);
+
+        const sizeDiv = document.createElement('div');
+        sizeDiv.className = 'text-muted smaller';
+        sizeDiv.textContent = sizeFormatted;
+        textDiv.appendChild(sizeDiv);
+
+        leftDiv.appendChild(textDiv);
+
+        const rightDiv = document.createElement('div');
+        rightDiv.className = 'd-flex align-items-center gap-1 ms-2';
+
+        const dlLink = document.createElement('a');
+        dlLink.href = `/api/notes/${activeNote.id}/download/${encodeURIComponent(att.storedName)}`;
+        dlLink.className = 'btn btn-outline-secondary btn-sm py-0 px-2';
+        dlLink.title = '다운로드';
+        dlLink.innerHTML = '<i class="bi bi-download"></i>';
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn-outline-danger btn-sm py-0 px-2';
+        delBtn.title = '삭제';
+        delBtn.innerHTML = '<i class="bi bi-trash"></i>';
+        delBtn.onclick = function() {
+          deleteAttachment(att.storedName);
+        };
+
+        rightDiv.appendChild(dlLink);
+        rightDiv.appendChild(delBtn);
+
+        row.appendChild(leftDiv);
+        row.appendChild(rightDiv);
+        container.appendChild(row);
+      });
+    }
+
+    // Handle File Upload via Multer
+    async function handleAttachmentUpload(event) {
+      if (!activeNote || !activeNote.id) return;
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // 5MB Limit Check
+      if (file.size > 5 * 1024 * 1024) {
+        if (typeof showAlert === 'function') showAlert('파일 크기는 최대 5MB까지 업로드 가능합니다.');
+        event.target.value = '';
+        return;
+      }
+
+      const allowedExts = ['.pdf', '.png', '.jpg', '.jpeg', '.txt', '.md', '.docx', '.xlsx', '.zip'];
+      const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      if (!allowedExts.includes(fileExt)) {
+        if (typeof showAlert === 'function') showAlert(`허용되지 않은 파일 형식입니다.\n(허용: ${allowedExts.join(', ')})`);
+        event.target.value = '';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      setDrawerSaveStatus('SAVING');
+      try {
+        const res = await fetch(`/api/notes/${activeNote.id}/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success && data.attachments) {
+          activeNote.attachments = data.attachments;
+          renderDrawerAttachments(activeNote.attachments);
+          setDrawerSaveStatus('SAVED');
+          if (typeof showAlert === 'function') showAlert('파일이 성공적으로 첨부되었습니다.');
+        } else {
+          setDrawerSaveStatus('ERROR');
+          if (typeof showAlert === 'function') showAlert(data.error || '파일 업로드에 실패했습니다.');
+        }
+      } catch (err) {
+        setDrawerSaveStatus('ERROR');
+        if (typeof showAlert === 'function') showAlert('파일 업로드 중 네트워크 오류가 발생했습니다.');
+      } finally {
+        event.target.value = '';
+      }
+    }
+
+    // Delete Attachment
+    async function deleteAttachment(storedName) {
+      if (!activeNote || !activeNote.id) return;
+
+      if (typeof showConfirm === 'function') {
+        const confirmed = await showConfirm('이 첨부 파일을 삭제하시겠습니까?');
+        if (!confirmed) return;
+      }
+
+      try {
+        const res = await fetch(`/api/notes/${activeNote.id}/attachments/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storedName })
+        });
+        const data = await res.json();
+        if (data.success && data.attachments) {
+          activeNote.attachments = data.attachments;
+          renderDrawerAttachments(activeNote.attachments);
+          if (typeof showAlert === 'function') showAlert('첨부 파일이 삭제되었습니다.');
+        } else {
+          if (typeof showAlert === 'function') showAlert(data.error || '파일 삭제에 실패했습니다.');
+        }
+      } catch (err) {
+        if (typeof showAlert === 'function') showAlert('파일 삭제 중 오류가 발생했습니다.');
+      }
+    }
+
+    // Delete Note by ID (from Card Menu)
+    async function deleteNoteById(event, noteId) {
+      event.stopPropagation();
+      if (typeof showConfirm === 'function') {
+        const confirmed = await showConfirm('이 문서를 영구적으로 삭제하시겠습니까? 첨부된 파일도 함께 삭제됩니다.');
+        if (!confirmed) return;
+      }
+
+      try {
+        const res = await fetch(`/api/notes/${noteId}/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (activeNote && activeNote.id === noteId) {
+            closeNoteDrawer();
+          }
+          const cardCol = document.querySelector(`.note-card-col[data-note-id="${noteId}"]`);
+          if (cardCol) cardCol.remove();
+          filterNotes();
+          if (typeof showAlert === 'function') showAlert('문서가 삭제되었습니다.');
+        } else {
+          if (typeof showAlert === 'function') showAlert(data.error || '문서 삭제에 실패했습니다.');
+        }
+      } catch (err) {
+        if (typeof showAlert === 'function') showAlert('문서 삭제 중 오류가 발생했습니다.');
+      }
+    }
+
+    // Delete Current Note (from Drawer)
+    async function deleteCurrentNote() {
+      if (!activeNote || !activeNote.id) return;
+      deleteNoteById(new Event('click'), activeNote.id);
+    }
+
+    // Auto-open note on page load if query param present
+    window.addEventListener('DOMContentLoaded', () => {
+      if (openNoteIdOnLoad) {
+        openNoteDrawer(openNoteIdOnLoad);
+      }
+    });
+  </script>
+
+  <%- include('partials/mini-timer') %>
+
+</body>
+</html>

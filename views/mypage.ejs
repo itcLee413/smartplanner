@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>마이페이지 - WorkSmarter</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <!-- ========================================== -->
+    <!-- 1. Notion-Style Left Fixed Sidebar         -->
+    <!-- ========================================== -->
+    <aside class="notion-sidebar" id="appSidebar">
+      <!-- Sidebar Brand -->
+      <div class="sidebar-brand-box d-flex align-items-center justify-content-between">
+        <a href="/" class="navbar-brand-custom text-decoration-none">
+          <i class="bi bi-calendar2-check-fill text-primary"></i>
+          <span>WorkSmarter</span>
+        </a>
+        <button class="btn btn-sm btn-light" type="button" onclick="toggleSidebarCollapse()" title="사이드바 접기/펼치기">
+          <i class="bi bi-list"></i>
+        </button>
+      </div>
+
+      <!-- User Profile Box -->
+      <div class="sidebar-user-box d-flex align-items-center gap-2">
+        <div class="sidebar-avatar">
+          <%= user.name.charAt(0) %>
+        </div>
+        <div class="overflow-hidden">
+          <div class="fw-bold small text-truncate"><%= user.name %></div>
+          <div class="text-muted smaller text-truncate">@<%= user.username %> · <span class="badge bg-light text-secondary border py-0 px-1"><%= user.role %></span></div>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <div class="p-2 flex-grow-1">
+        <div class="sidebar-section-title">개인 워크스페이스</div>
+        <a href="/" class="sidebar-link <%= activeMenu === 'dashboard' ? 'active' : '' %>">
+          <i class="bi bi-speedometer2"></i>
+          <span>내 대시보드</span>
+        </a>
+        <a href="/notes" class="sidebar-link <%= activeMenu === 'notes' ? 'active' : '' %>">
+          <i class="bi bi-file-earmark-text"></i>
+          <span>세부사항 / 문서함</span>
+        </a>
+        <a href="/mypage" class="sidebar-link <%= activeMenu === 'mypage' ? 'active' : '' %>">
+          <i class="bi bi-person-gear"></i>
+          <span>마이페이지</span>
+        </a>
+
+        <div class="sidebar-section-title pt-3">팀 협업 공간</div>
+        <a href="/teams" class="sidebar-link <%= activeMenu === 'teams' ? 'active' : '' %>">
+          <i class="bi bi-people-fill text-primary"></i>
+          <span>팀 워크스페이스</span>
+          <span class="badge bg-primary text-white ms-auto rounded-pill px-2">Team</span>
+        </a>
+
+        <% if (user.role === 'ADMIN') { %>
+          <div class="sidebar-section-title pt-3">시스템 관제</div>
+          <a href="/admin" class="sidebar-link <%= activeMenu === 'admin' ? 'active' : '' %>">
+            <i class="bi bi-shield-lock-fill text-warning"></i>
+            <span>관리자 콘솔</span>
+          </a>
+        <% } %>
+      </div>
+
+      <!-- Sidebar Footer (Logout) -->
+      <div class="sidebar-footer">
+        <a href="/logout" class="btn btn-outline-danger btn-sm w-100 d-flex align-items-center justify-content-center gap-2">
+          <i class="bi bi-box-arrow-right"></i>
+          <span>로그아웃</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Mobile Backdrop -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebarCollapse()"></div>
+
+    <!-- ========================================== -->
+    <!-- 2. Main Content Area                       -->
+    <!-- ========================================== -->
+    <div class="app-main-content">
+      <!-- Top Mobile & Status Bar -->
+      <header class="d-flex align-items-center justify-content-between px-4 py-2 border-bottom bg-white sticky-top">
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button" onclick="toggleSidebarCollapse()" title="사이드바 접기/펼치기">
+            <i class="bi bi-list fs-5"></i>
+          </button>
+          <span class="fw-bold text-dark fs-6 d-flex align-items-center gap-2">
+            <i class="bi bi-person-gear text-primary"></i> 마이페이지
+          </span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-light text-dark border px-2 py-1 fw-normal">
+            <i class="bi bi-person-fill text-primary me-1"></i>
+            <strong><%= user.name %></strong> (<%= user.username %>)
+          </span>
+        </div>
+      </header>
+
+      <!-- Global Alerts -->
+      <div class="container-fluid px-4 mt-3">
+        <% if (errorMsg) { %>
+          <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center py-2 px-3 rounded-3 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div><%= errorMsg %></div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        <% } %>
+
+        <% if (successMsg) { %>
+          <div class="alert alert-success alert-dismissible fade show d-flex align-items-center py-2 px-3 rounded-3 mb-3" role="alert">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div><%= successMsg %></div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Main Container -->
+      <main class="container-fluid px-4 py-3 flex-grow-1" style="max-width: 960px;">
+
+        <!-- Page Header -->
+        <div class="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom">
+          <div>
+            <h4 class="fw-bold mb-1"><i class="bi bi-person-gear text-primary me-2"></i>내 정보 관리 (마이페이지)</h4>
+            <p class="text-muted small mb-0">프로필 수정, 비밀번호 변경, 텔레그램 연동 관리를 수행할 수 있습니다.</p>
+          </div>
+          <span class="badge bg-primary fs-6 px-3 py-2"><%= user.role %></span>
+        </div>
+
+        <!-- Summary Stats Card -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="card card-custom p-3 text-center">
+              <span class="text-muted small d-block">총 등록 일정</span>
+              <span class="fs-4 fw-bold text-dark"><%= stats ? stats.total : 0 %>개</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card card-custom p-3 text-center">
+              <span class="text-muted small d-block">완료된 일정</span>
+              <span class="fs-4 fw-bold text-success"><%= stats ? stats.done : 0 %>개</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card card-custom p-3 text-center">
+              <span class="text-muted small d-block">누적 몰입 시간</span>
+              <span class="fs-4 fw-bold text-primary"><%= stats ? (stats.focus_total || 0) : 0 %>분</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. Profile Update Card -->
+        <div class="card card-custom mb-4">
+          <div class="card-header-custom">
+            <span><i class="bi bi-person-badge text-primary me-1"></i> 기본 프로필 수정</span>
+          </div>
+          <div class="card-body p-4">
+            <form action="/mypage/profile" method="POST">
+              <div class="mb-3">
+                <label class="form-label small fw-semibold text-secondary">아이디 (변경 불가)</label>
+                <input type="text" class="form-control" value="<%= user.username %>" readonly disabled>
+              </div>
+              <div class="mb-3">
+                <label for="nameInput" class="form-label small fw-semibold text-secondary">이름 (실명 또는 닉네임)</label>
+                <input type="text" id="nameInput" name="name" class="form-control" value="<%= user.name %>" required>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm fw-semibold">
+                <i class="bi bi-check2 me-1"></i> 프로필 이름 저장
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- 2. Password Change Card -->
+        <div class="card card-custom mb-4">
+          <div class="card-header-custom">
+            <span><i class="bi bi-key text-warning me-1"></i> 비밀번호 변경</span>
+          </div>
+          <div class="card-body p-4">
+            <form action="/mypage/password" method="POST">
+              <div class="mb-3">
+                <label for="currentPassword" class="form-label small fw-semibold text-secondary">현재 비밀번호</label>
+                <input type="password" id="currentPassword" name="current_password" class="form-control" placeholder="현재 비밀번호 입력" required>
+              </div>
+              <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                  <label for="newPassword" class="form-label small fw-semibold text-secondary">새 비밀번호</label>
+                  <input type="password" id="newPassword" name="new_password" class="form-control" placeholder="새 비밀번호 입력" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="newPasswordConfirm" class="form-label small fw-semibold text-secondary">새 비밀번호 확인</label>
+                  <input type="password" id="newPasswordConfirm" name="new_password_confirm" class="form-control" placeholder="새 비밀번호 다시 입력" required>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-warning btn-sm fw-semibold text-dark">
+                <i class="bi bi-shield-lock me-1"></i> 비밀번호 변경
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- 3. Telegram Link Management Card -->
+        <div class="card card-custom mb-4">
+          <div class="card-header-custom">
+            <span><i class="bi bi-telegram text-primary me-1"></i> 텔레그램 연동 관리</span>
+          </div>
+          <div class="card-body p-4">
+            <div class="row align-items-center mb-3">
+              <div class="col-md-7">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <strong>연동 상태:</strong>
+                  <% if (user.telegram_chat_id) { %>
+                    <span class="badge bg-success">연동 완료 (Chat ID: <%= user.telegram_chat_id %>)</span>
+                  <% } else { %>
+                    <span class="badge bg-warning text-dark">미연동</span>
+                  <% } %>
+                </div>
+                <div class="small text-muted d-flex align-items-center gap-2 mt-1">
+                  <span>발급된 고유 연동 코드:</span>
+                  <% if (user.telegram_link_code) { %>
+                    <strong class="text-primary font-monospace letter-spacing fs-6" id="mypageTgCodeDisplay">••••••</strong>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" id="mypageTgToggleBtn" onclick="toggleTgCodeMask('mypageTgCodeDisplay', 'mypageTgToggleBtn', '<%= user.telegram_link_code %>')" title="연동 코드 표시">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                  <% } else { %>
+                    <span class="text-secondary fw-semibold">미발급 (우측 '코드 재발급' 버튼을 눌러주세요)</span>
+                  <% } %>
+                </div>
+              </div>
+              <div class="col-md-5 text-md-end mt-2 mt-md-0">
+                <div class="d-flex gap-2 justify-content-md-end">
+                  <form action="/telegram/generate-code" method="POST" class="m-0">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                      <i class="bi bi-arrow-repeat me-1"></i> 코드 재발급
+                    </button>
+                  </form>
+
+                  <% if (user.telegram_chat_id) { %>
+                    <form action="/mypage/telegram-unlink" method="POST" class="m-0" onsubmit="return confirm('텔레그램 연동을 해제하시겠습니까?');">
+                      <button type="submit" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-link-45deg me-1"></i> 연동 해제
+                      </button>
+                    </form>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+
+            <!-- Telegram Test Alert Button -->
+            <% if (user.telegram_chat_id) { %>
+              <div class="p-3 bg-light rounded border d-flex align-items-center justify-content-between">
+                <span class="small text-secondary">
+                  <i class="bi bi-info-circle me-1"></i> 텔레그램 알림 수신이 정상 작동하는지 확인해 보세요.
+                </span>
+                <form action="/telegram/test-alert" method="POST" class="m-0">
+                  <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-send me-1"></i> 테스트 브리핑 받기
+                  </button>
+                </form>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- 4. Dashboard Widget Configuration (modules.md) -->
+        <div class="card card-custom mb-4">
+          <div class="card-header-custom d-flex align-items-center justify-content-between">
+            <span><i class="bi bi-grid-1x2-fill text-primary me-1"></i> 대시보드 위젯 구성 설정</span>
+            <span class="badge bg-light text-secondary border">모듈형 대시보드</span>
+          </div>
+          <div class="card-body p-4">
+            <p class="text-muted small mb-3">
+              메인 대시보드에 표시할 위젯을 자유롭게 켜고 끌 수 있습니다. 설정 저장 후 대시보드에서 <strong>[레이아웃 편집 모드]</strong>를 통해 위치와 크기를 조절할 수 있습니다.
+            </p>
+
+            <div class="row g-3" id="widgetToggleList">
+              <% 
+                const widgetMeta = [
+                  { id: 'top3', title: '오늘의 핵심 목표 Top 3', desc: '오늘 가장 중요한 우선순위 집중 과제 3개 카드 및 체크리스트', badge: '기본 권장 (12x3)', icon: 'bi-trophy-fill text-warning' },
+                  { id: 'workspace', title: '일정 워크스페이스', desc: '개인 및 소속 팀 일정 관리 (칸반 보드 / 월간 캘린더 탭)', badge: '기본 권장 (8x7)', icon: 'bi-kanban-fill text-primary' },
+                  { id: 'stats', title: '생산성 통계 차트', desc: '카테고리별 일정 분포 도넛 차트 및 총 일정/완료율 요약', badge: '기본 권장 (4x4)', icon: 'bi-pie-chart-fill text-info' },
+                  { id: 'quick_add', title: '새 일정 빠른 등록 폼', desc: '개인 또는 팀 워크스페이스에 즉시 일정을 추가하는 간편 폼', badge: '기본 권장 (4x3)', icon: 'bi-plus-circle-fill text-success' },
+                  { id: 'clock', title: '실시간 디지털 시계 & 날짜', desc: '초 단위 실시간 시계와 오늘의 날짜, 25분 집중 바로 시작 퀵 버튼', badge: '신규 위젯 (4x2)', icon: 'bi-clock-fill text-danger' },
+                  { id: 'memo', title: '빠른 포스트잇 메모장', desc: '노션 스타일의 깔끔한 빠른 메모장 (타이핑 시 1초 자동 저장)', badge: '신규 위젯 (4x3)', icon: 'bi-sticky-fill text-warning' }
+                ];
+              %>
+
+              <% widgetMeta.forEach(m => { 
+                   const curItem = (typeof dashboardLayout !== 'undefined' && dashboardLayout) ? dashboardLayout.find(item => item.id === m.id) : null;
+                   const isChecked = curItem ? curItem.enabled : false;
+              %>
+                <div class="col-md-6">
+                  <div class="p-3 border rounded-3 bg-light bg-opacity-50 h-100 d-flex flex-column justify-content-between">
+                    <div>
+                      <div class="d-flex align-items-center justify-content-between mb-1">
+                        <label class="form-check-label fw-bold d-flex align-items-center gap-2 cursor-pointer" for="toggle_<%= m.id %>">
+                          <i class="bi <%= m.icon %>"></i>
+                          <span><%= m.title %></span>
+                        </label>
+                        <div class="form-check form-switch m-0">
+                          <input class="form-check-input cursor-pointer widget-config-toggle" type="checkbox" role="switch" id="toggle_<%= m.id %>" data-widget-id="<%= m.id %>" <%= isChecked ? 'checked' : '' %>>
+                        </div>
+                      </div>
+                      <p class="small text-muted mb-2"><%= m.desc %></p>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between pt-2 border-top border-light-subtle">
+                      <span class="badge bg-white text-secondary border smaller"><%= m.badge %></span>
+                      <span class="badge <%= isChecked ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle' %> toggle-status-badge" id="status_<%= m.id %>">
+                        <%= isChecked ? '활성화됨' : '숨김' %>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-4 pt-3 border-top">
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetDashboardWidgets()">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> 기본 프리셋으로 초기화
+              </button>
+              <button type="button" class="btn btn-primary btn-sm fw-semibold" id="btnSaveWidgets" onclick="saveDashboardWidgets()">
+                <i class="bi bi-check2 me-1"></i> 위젯 설정 저장
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4-1. 나만의 커스텀 위젯 관리 & 코드 공유 (moduleplus.md) -->
+        <div class="card card-custom mb-4" id="customWidgetManagementCard">
+          <div class="card-header-custom d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+              <span><i class="bi bi-puzzle-fill text-primary me-1"></i> 나만의 커스텀 위젯 관리 & 코드 공유</span>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">위젯 빌더 & 마켓</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openImportModal()">
+                <i class="bi bi-box-arrow-in-down me-1"></i> JSON 코드로 위젯 가져오기
+              </button>
+              <button type="button" class="btn btn-sm btn-primary fw-semibold" onclick="openCreateModal()">
+                <i class="bi bi-plus-lg me-1"></i> 새 커스텀 위젯 만들기
+              </button>
+            </div>
+          </div>
+          <div class="card-body p-4">
+            <p class="text-muted small mb-3">
+              직접 HTML/CSS/JS 코드를 작성하여 나만의 위젯을 만들거나 다른 사용자가 공유한 JSON 코드를 가져올 수 있습니다. 모든 커스텀 위젯은 노션 스타일 디자인 시스템(Design Tokens + <code>.ws-*</code>)이 자동 적용되어 대시보드와 완벽한 시각적 일관성을 유지합니다.
+            </p>
+
+            <div id="customWidgetListContainer">
+              <% if (!customWidgets || customWidgets.length === 0) { %>
+                <div class="text-center py-5 border rounded-3 bg-light bg-opacity-50" id="emptyCustomWidgetNotice">
+                  <i class="bi bi-puzzle fs-1 text-secondary opacity-50 mb-2 d-block"></i>
+                  <h6 class="fw-bold text-secondary mb-1">등록된 커스텀 위젯이 없습니다</h6>
+                  <p class="small text-muted mb-3">상단의 <strong>[+ 새 커스텀 위젯 만들기]</strong> 버튼을 눌러 위젯을 직접 제작하거나, 공유된 JSON 코드를 가져와 설치해 보세요.</p>
+                  <button type="button" class="btn btn-sm btn-outline-primary" onclick="openCreateModal()">
+                    <i class="bi bi-magic me-1"></i> 첫 번째 커스텀 위젯 제작하기
+                  </button>
+                </div>
+              <% } else { %>
+                <div class="row g-3" id="customWidgetsGrid">
+                  <% customWidgets.forEach(cw => { 
+                       const customConf = (typeof dashboardLayout !== 'undefined' && dashboardLayout) ? dashboardLayout.find(item => item.id === 'custom_' + cw.id) : null;
+                       const isChecked = customConf ? customConf.enabled : true;
+                  %>
+                    <div class="col-md-6" id="cw-card-col-<%= cw.id %>">
+                      <div class="p-3 border rounded-3 bg-light bg-opacity-50 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                          <div class="d-flex align-items-center justify-content-between mb-1">
+                            <div class="fw-bold d-flex align-items-center gap-2 text-truncate me-2">
+                              <i class="bi bi-puzzle-fill text-primary"></i>
+                              <span class="text-truncate" title="<%= cw.title %>"><%= cw.title %></span>
+                            </div>
+                            <div class="form-check form-switch m-0" title="대시보드 표시 여부">
+                              <input class="form-check-input cursor-pointer" type="checkbox" role="switch" id="cw_toggle_<%= cw.id %>" <%= isChecked ? 'checked' : '' %> onchange="toggleCustomWidgetDisplay('<%= cw.id %>', this.checked)">
+                            </div>
+                          </div>
+                          <p class="small text-muted mb-2 text-truncate-2" style="min-height: 2.4em;"><%= cw.description || '별도의 설명이 등록되지 않은 커스텀 위젯입니다.' %></p>
+                        </div>
+                        <div class="pt-2 border-top border-light-subtle">
+                          <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="badge bg-white text-secondary border smaller">기본 크기: <%= cw.default_w %>x<%= cw.default_h %></span>
+                            <span class="badge <%= isChecked ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle' %>" id="cw_status_<%= cw.id %>">
+                              <%= isChecked ? '대시보드 표시 중' : '숨김' %>
+                            </span>
+                          </div>
+                          <div class="d-flex align-items-center justify-content-end gap-1">
+                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 smaller" onclick="exportCustomWidget('<%= cw.id %>')" title="JSON 코드 클립보드 복사">
+                              <i class="bi bi-share me-1"></i>코드 공유(JSON 복사)
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 smaller" onclick="editCustomWidget('<%= cw.id %>')" title="위젯 수정">
+                              <i class="bi bi-pencil me-1"></i>수정
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 smaller" onclick="deleteCustomWidget('<%= cw.id %>')" title="위젯 삭제">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  <% }); %>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Danger Zone (Account Deletion) -->
+        <div class="card card-custom border-danger border-opacity-50">
+          <div class="card-header-custom text-danger">
+            <span><i class="bi bi-exclamation-octagon-fill me-1"></i> Danger Zone (계정 관리)</span>
+          </div>
+          <div class="card-body p-4 d-flex align-items-center justify-content-between">
+            <div>
+              <h6 class="fw-bold text-danger mb-1">회원 탈퇴</h6>
+              <p class="small text-muted mb-0">계정 및 등록된 모든 일정, 체크리스트, 통계 데이터가 즉시 영구 삭제되며 복구할 수 없습니다.</p>
+            </div>
+            <form action="/mypage/delete-account" method="POST" onsubmit="return confirm('정말로 회원 탈퇴를 진행하시겠습니까? 등록된 모든 데이터가 영구 삭제됩니다.');">
+              <button type="submit" class="btn btn-danger btn-sm fw-semibold">
+                <i class="bi bi-trash-fill me-1"></i> 회원 탈퇴
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function toggleSidebar() {
+      const sidebar = document.getElementById('appSidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      if (sidebar && backdrop) {
+        sidebar.classList.toggle('show');
+        backdrop.classList.toggle('show');
+      }
+    }
+
+    function toggleTgCodeMask(displayId, btnId, realCode) {
+      const displayEl = document.getElementById(displayId);
+      const btnEl = document.getElementById(btnId);
+      if (!displayEl || !btnEl) return;
+      const isMasked = displayEl.textContent.trim() === '••••••';
+      if (isMasked) {
+        displayEl.textContent = realCode;
+        btnEl.innerHTML = '<i class="bi bi-eye-slash"></i>';
+        btnEl.title = '연동 코드 숨기기';
+      } else {
+        displayEl.textContent = '••••••';
+        btnEl.innerHTML = '<i class="bi bi-eye"></i>';
+        btnEl.title = '연동 코드 표시';
+      }
+    }
+
+    // Toggle switch badge text change
+    document.querySelectorAll('.widget-config-toggle').forEach(chk => {
+      chk.addEventListener('change', function() {
+        const id = this.getAttribute('data-widget-id');
+        const badge = document.getElementById('status_' + id);
+        if (badge) {
+          if (this.checked) {
+            badge.textContent = '활성화됨';
+            badge.className = 'badge bg-success-subtle text-success border border-success-subtle toggle-status-badge';
+          } else {
+            badge.textContent = '숨김';
+            badge.className = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle toggle-status-badge';
+          }
+        }
+      });
+    });
+
+    async function saveDashboardWidgets() {
+      const btn = document.getElementById('btnSaveWidgets');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>저장 중...';
+
+      const widgets = {};
+      document.querySelectorAll('.widget-config-toggle').forEach(chk => {
+        widgets[chk.getAttribute('data-widget-id')] = chk.checked;
+      });
+
+      try {
+        const res = await fetch('/api/dashboard/widgets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ widgets })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('위젯 설정이 성공적으로 저장되었습니다. 내 대시보드로 이동하면 변경된 위젯 구성을 확인할 수 있습니다.');
+        } else {
+          alert('설정 저장 실패: ' + (data.error || data.message || '알 수 없는 오류'));
+        }
+      } catch (err) {
+        alert('서버 통신 중 오류가 발생했습니다.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    async function resetDashboardWidgets() {
+      if (!confirm('대시보드 위젯 구성을 초기 기본 프리셋으로 복구하시겠습니까? (기본 1~4번 위젯 활성화 및 위치 초기화)')) {
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/dashboard/widgets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reset: true })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('기본 프리셋으로 초기화되었습니다.');
+          window.location.reload();
+        } else {
+          alert('초기화 실패: ' + (data.error || data.message || '알 수 없는 오류'));
+        }
+      } catch (err) {
+        alert('서버 통신 중 오류가 발생했습니다.');
+      }
+    }
+
+    // ==========================================
+    // Custom Widget Builder & Market Logic (moduleplus.md)
+    // ==========================================
+    let editingWidgetId = null;
+    let previewDebounceTimer = null;
+    let activeEditorTab = 'html';
+    const clientCustomWidgets = <%- JSON.stringify(customWidgets || []) %>;
+
+    const STARTER_TEMPLATES = {
+      dday: {
+        title: '🎯 목표 D-Day 카운터',
+        description: '목표일까지 남은 날짜를 실시간 계산하는 노션 스타일 카드',
+        default_w: 4,
+        default_h: 3,
+        html: `<div class="ws-card">
+  <div class="ws-title">🎯 목표 D-Day 카운터</div>
+  <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+    <input type="text" id="targetName" class="ws-input" placeholder="목표 이름 (예: 프로젝트 출시)" value="프로젝트 출시">
+    <input type="date" id="targetDate" class="ws-input" style="width: 140px;">
+  </div>
+  <div style="text-align: center; padding: 12px; background: #fff; border-radius: var(--ws-radius); border: 1px solid var(--ws-border);">
+    <span id="ddayBadge" class="ws-badge" style="font-size: 14px; font-weight: 700; color: var(--ws-accent);">D-Day 계산 중</span>
+    <div id="ddayDesc" class="ws-muted" style="margin-top: 6px;">목표일까지 남은 날짜를 계산합니다.</div>
+  </div>
+  <div style="margin-top: 10px; text-align: right;">
+    <button class="ws-btn ws-btn-primary" onclick="calcDDay()">D-Day 계산</button>
+  </div>
+</div>`,
+        css: `/* D-Day Counter Custom Style */
+#ddayBadge {
+  padding: 4px 12px;
+}`,
+        js: `// Set default date to 7 days later
+const nextWeek = new Date();
+nextWeek.setDate(nextWeek.getDate() + 7);
+document.getElementById('targetDate').value = nextWeek.toISOString().slice(0, 10);
+
+function calcDDay() {
+  const targetVal = document.getElementById('targetDate').value;
+  const nameVal = document.getElementById('targetName').value || '목표';
+  if (!targetVal) return;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const target = new Date(targetVal);
+  target.setHours(0, 0, 0, 0);
+  const diffTime = target - now;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  const badge = document.getElementById('ddayBadge');
+  const desc = document.getElementById('ddayDesc');
+  if (diffDays === 0) {
+    badge.textContent = 'D-DAY (오늘!)';
+    badge.style.color = '#E03E3E';
+  } else if (diffDays > 0) {
+    badge.textContent = 'D - ' + diffDays;
+    badge.style.color = 'var(--ws-accent)';
+  } else {
+    badge.textContent = 'D + ' + Math.abs(diffDays);
+    badge.style.color = 'var(--ws-muted)';
+  }
+  desc.textContent = nameVal + '까지 ' + (diffDays >= 0 ? diffDays + '일 남았습니다.' : Math.abs(diffDays) + '일 지났습니다.');
+}
+calcDDay();`
+      },
+      completion: {
+        title: '📊 오늘의 완료율 미니 카드',
+        description: 'WorkSmarter 데이터 브릿지(WS_CONTEXT)를 연동한 일정 완료율 게이지',
+        default_w: 4,
+        default_h: 3,
+        html: `<div class="ws-card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+    <div class="ws-title" style="margin: 0;">📊 오늘의 완료율</div>
+    <span id="rateBadge" class="ws-badge">0% 완료</span>
+  </div>
+  <div style="background: #E9E9E7; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 12px;">
+    <div id="progressBar" style="background: var(--ws-accent); height: 100%; width: 0%; transition: width 0.4s ease;"></div>
+  </div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; text-align: center;">
+    <div style="background: #fff; padding: 6px; border-radius: var(--ws-radius); border: 1px solid var(--ws-border);">
+      <div class="ws-muted">대기</div>
+      <div id="todoCount" style="font-weight: 600; font-size: 14px;">0</div>
+    </div>
+    <div style="background: #fff; padding: 6px; border-radius: var(--ws-radius); border: 1px solid var(--ws-border);">
+      <div class="ws-muted">진행 중</div>
+      <div id="inProgressCount" style="font-weight: 600; font-size: 14px; color: var(--ws-accent);">0</div>
+    </div>
+    <div style="background: #fff; padding: 6px; border-radius: var(--ws-radius); border: 1px solid var(--ws-border);">
+      <div class="ws-muted">완료</div>
+      <div id="doneCount" style="font-weight: 600; font-size: 14px; color: #0F7B6C;">0</div>
+    </div>
+  </div>
+</div>`,
+        css: `/* Completion Rate Style */
+#progressBar {
+  background: linear-gradient(90deg, #2383E2, #0F7B6C);
+}`,
+        js: `function applyContext(data) {
+  if (!data) return;
+  const todo = data.todoCount || 0;
+  const inProgress = data.inProgressCount || 0;
+  const done = data.doneCount || 0;
+  const total = todo + inProgress + done;
+  const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+  
+  document.getElementById('todoCount').textContent = todo;
+  document.getElementById('inProgressCount').textContent = inProgress;
+  document.getElementById('doneCount').textContent = done;
+  document.getElementById('rateBadge').textContent = percent + '% 완료';
+  document.getElementById('progressBar').style.width = percent + '%';
+}
+
+window.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'WS_CONTEXT') {
+    applyContext(event.data.data);
+  }
+});
+
+// Request context immediately in case parent sent it before listener attached
+window.parent.postMessage({ type: 'REQUEST_WS_CONTEXT' }, '*');`
+      }
+    };
+
+    function buildClientSrcdoc(htmlCode, cssCode, jsCode) {
+      const commonCss = `
+        :root {
+          --ws-bg: #FFFFFF;
+          --ws-sub-bg: #F7F7F5;
+          --ws-border: #E9E9E7;
+          --ws-text: #37352F;
+          --ws-muted: #787774;
+          --ws-accent: #2383E2;
+          --ws-radius: 6px;
+        }
+        * { box-sizing: border-box; }
+        body {
+          margin: 0;
+          padding: 12px;
+          font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          color: #37352F;
+          background: #FFFFFF;
+          font-size: 13px;
+          line-height: 1.5;
+        }
+        .ws-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          padding: 5px 12px;
+          font-size: 12px;
+          font-weight: 500;
+          border-radius: var(--ws-radius);
+          border: 1px solid var(--ws-border);
+          background: var(--ws-bg);
+          color: var(--ws-text);
+          cursor: pointer;
+          transition: background 0.15s, border-color 0.15s;
+          text-decoration: none;
+        }
+        .ws-btn:hover { background: var(--ws-sub-bg); border-color: #D3D3D0; }
+        .ws-btn-primary {
+          background: var(--ws-accent);
+          color: #FFFFFF;
+          border: 1px solid var(--ws-accent);
+        }
+        .ws-btn-primary:hover { background: #1a6fbf; border-color: #1a6fbf; }
+        .ws-input {
+          width: 100%;
+          padding: 6px 10px;
+          font-size: 13px;
+          border: 1px solid var(--ws-border);
+          border-radius: var(--ws-radius);
+          background: var(--ws-bg);
+          color: var(--ws-text);
+          outline: none;
+          transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .ws-input:focus {
+          border-color: var(--ws-accent);
+          box-shadow: 0 0 0 2px rgba(35, 131, 226, 0.15);
+        }
+        .ws-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 2px 7px;
+          font-size: 11px;
+          font-weight: 500;
+          border-radius: 4px;
+          background: var(--ws-sub-bg);
+          color: var(--ws-muted);
+          border: 1px solid var(--ws-border);
+        }
+        .ws-card {
+          background: var(--ws-sub-bg);
+          border: 1px solid var(--ws-border);
+          border-radius: var(--ws-radius);
+          padding: 10px 12px;
+          margin-bottom: 8px;
+        }
+        .ws-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: var(--ws-text);
+          margin: 0 0 6px 0;
+        }
+        .ws-muted {
+          color: var(--ws-muted);
+          font-size: 12px;
+        }
+      `;
+
+      return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <style>
+\${commonCss}
+\${cssCode || ''}
+  </style>
+</head>
+<body>
+\${htmlCode || ''}
+<script>
+  try {
+\${jsCode || ''}
+  } catch (err) {
+    console.error("Custom widget script error:", err);
+  }
+<\/script>
+</body>
+</html>`;
+    }
+
+    function switchEditorTab(tab) {
+      activeEditorTab = tab;
+      ['html', 'css', 'js'].forEach(t => {
+        const btn = document.getElementById(`tab-\${t}-btn`);
+        const pane = document.getElementById(`pane-\${t}`);
+        if (btn) btn.classList.toggle('active', t === tab);
+        if (pane) pane.classList.toggle('active', t === tab);
+      });
+    }
+
+    function onBuilderCodeInput() {
+      clearTimeout(previewDebounceTimer);
+      previewDebounceTimer = setTimeout(refreshBuilderPreview, 250);
+    }
+
+    function refreshBuilderPreview() {
+      const htmlCode = document.getElementById('builderHtmlCode').value;
+      const cssCode = document.getElementById('builderCssCode').value;
+      const jsCode = document.getElementById('builderJsCode').value;
+      const title = document.getElementById('builderTitle').value || '미리보기';
+
+      const titleDisplay = document.getElementById('previewWidgetTitleDisplay');
+      if (titleDisplay) titleDisplay.textContent = title;
+
+      const iframe = document.getElementById('builderPreviewIframe');
+      if (!iframe) return;
+
+      iframe.srcdoc = buildClientSrcdoc(htmlCode, cssCode, jsCode);
+      iframe.onload = () => {
+        // Send preview context data
+        try {
+          iframe.contentWindow.postMessage({
+            type: 'WS_CONTEXT',
+            data: {
+              username: <%- JSON.stringify(user.name || user.username) %>,
+              todoCount: 3,
+              inProgressCount: 2,
+              doneCount: 5,
+              top3Titles: ['기획서 검토', 'API 설계', '코드 리뷰']
+            }
+          }, '*');
+        } catch (e) {}
+      };
+    }
+
+    // Handle REQUEST_WS_CONTEXT from preview iframe
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'REQUEST_WS_CONTEXT') {
+        const iframe = document.getElementById('builderPreviewIframe');
+        if (iframe && iframe.contentWindow) {
+          try {
+            iframe.contentWindow.postMessage({
+              type: 'WS_CONTEXT',
+              data: {
+                username: <%- JSON.stringify(user.name || user.username) %>,
+                todoCount: 3,
+                inProgressCount: 2,
+                doneCount: 5,
+                top3Titles: ['기획서 검토', 'API 설계', '코드 리뷰']
+              }
+            }, '*');
+          } catch (e) {}
+        }
+      }
+    });
+
+    function loadStarterTemplate(type) {
+      const tmpl = STARTER_TEMPLATES[type];
+      if (!tmpl) return;
+
+      document.getElementById('builderTitle').value = tmpl.title;
+      document.getElementById('builderDescription').value = tmpl.description;
+      document.getElementById('builderWidth').value = tmpl.default_w;
+      document.getElementById('builderHeight').value = tmpl.default_h;
+      document.getElementById('builderHtmlCode').value = tmpl.html;
+      document.getElementById('builderCssCode').value = tmpl.css;
+      document.getElementById('builderJsCode').value = tmpl.js;
+
+      refreshBuilderPreview();
+    }
+
+    function insertCodeChip(snippetType) {
+      let snippet = '';
+      if (snippetType === '.ws-btn') snippet = '<button class="ws-btn">버튼</button>';
+      else if (snippetType === '.ws-btn-primary') snippet = '<button class="ws-btn ws-btn-primary">강조 버튼</button>';
+      else if (snippetType === '.ws-input') snippet = '<input type="text" class="ws-input" placeholder="입력하세요...">';
+      else if (snippetType === '.ws-badge') snippet = '<span class="ws-badge">배지</span>';
+      else if (snippetType === '.ws-card') snippet = '<div class="ws-card">\\n  <div class="ws-title">카드 제목</div>\\n  <div class="ws-muted">내용 설명</div>\\n</div>';
+      else if (snippetType === '.ws-title') snippet = '<div class="ws-title">제목</div>';
+      else if (snippetType === '.ws-muted') snippet = '<div class="ws-muted">설명 문구</div>';
+
+      switchEditorTab('html');
+      const textarea = document.getElementById('builderHtmlCode');
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = textarea.value;
+      textarea.value = text.substring(0, start) + snippet + text.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = start + snippet.length;
+      textarea.focus();
+      refreshBuilderPreview();
+    }
+
+    function openCreateModal() {
+      editingWidgetId = null;
+      document.getElementById('builderModalTitle').innerHTML = '<i class="bi bi-magic text-primary"></i> <span>새 커스텀 위젯 만들기</span>';
+      document.getElementById('builderTitle').value = '';
+      document.getElementById('builderDescription').value = '';
+      document.getElementById('builderWidth').value = '4';
+      document.getElementById('builderHeight').value = '3';
+      document.getElementById('builderHtmlCode').value = '';
+      document.getElementById('builderCssCode').value = '';
+      document.getElementById('builderJsCode').value = '';
+
+      switchEditorTab('html');
+      loadStarterTemplate('dday'); // Load D-Day as friendly default
+
+      const modalEl = document.getElementById('customWidgetBuilderModal');
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    }
+
+    function editCustomWidget(widgetId) {
+      const widget = clientCustomWidgets.find(w => String(w.id) === String(widgetId));
+      if (!widget) {
+        alert('위젯 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      editingWidgetId = widget.id;
+      document.getElementById('builderModalTitle').innerHTML = '<i class="bi bi-pencil-square text-primary"></i> <span>커스텀 위젯 수정: ' + widget.title + '</span>';
+      document.getElementById('builderTitle').value = widget.title || '';
+      document.getElementById('builderDescription').value = widget.description || '';
+      document.getElementById('builderWidth').value = widget.default_w || 4;
+      document.getElementById('builderHeight').value = widget.default_h || 3;
+      document.getElementById('builderHtmlCode').value = widget.html_code || '';
+      document.getElementById('builderCssCode').value = widget.css_code || '';
+      document.getElementById('builderJsCode').value = widget.js_code || '';
+
+      switchEditorTab('html');
+      refreshBuilderPreview();
+
+      const modalEl = document.getElementById('customWidgetBuilderModal');
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    }
+
+    async function saveCustomWidgetFromBuilder() {
+      const title = document.getElementById('builderTitle').value.trim();
+      if (!title) {
+        alert('위젯 제목을 입력해 주세요.');
+        document.getElementById('builderTitle').focus();
+        return;
+      }
+
+      const payload = {
+        title,
+        description: document.getElementById('builderDescription').value.trim(),
+        default_w: parseInt(document.getElementById('builderWidth').value, 10) || 4,
+        default_h: parseInt(document.getElementById('builderHeight').value, 10) || 3,
+        html_code: document.getElementById('builderHtmlCode').value,
+        css_code: document.getElementById('builderCssCode').value,
+        js_code: document.getElementById('builderJsCode').value
+      };
+
+      const btn = document.getElementById('btnSaveBuilderWidget');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>저장 중...';
+
+      try {
+        const url = editingWidgetId ? `/api/custom-widgets/\${editingWidgetId}/update` : '/api/custom-widgets';
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message || '커스텀 위젯이 저장되었습니다.');
+          window.location.reload();
+        } else {
+          alert('저장 실패: ' + (data.message || '오류가 발생했습니다.'));
+        }
+      } catch (err) {
+        alert('서버 통신 중 오류가 발생했습니다.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    async function deleteCustomWidget(widgetId) {
+      if (!confirm('정말로 이 커스텀 위젯을 삭제하시겠습니까? (대시보드 레이아웃에서도 함께 제거됩니다)')) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/custom-widgets/\${widgetId}/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('위젯이 삭제되었습니다.');
+          window.location.reload();
+        } else {
+          alert('삭제 실패: ' + (data.message || '오류가 발생했습니다.'));
+        }
+      } catch (err) {
+        alert('서버 통신 중 오류가 발생했습니다.');
+      }
+    }
+
+    async function exportCustomWidget(widgetId) {
+      try {
+        const res = await fetch(`/api/custom-widgets/\${widgetId}/export`);
+        if (!res.ok) throw new Error('Export API error');
+        const exportData = await res.json();
+        const jsonString = JSON.stringify(exportData, null, 2);
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(jsonString);
+          alert('위젯 JSON 코드가 클립보드에 복사되었습니다! 원하는 곳에 붙여넣어 공유하세요.\\n\\n[포맷: WorkSmarter-Widget-v1]');
+        } else {
+          prompt('아래 JSON 코드를 복사하세요:', jsonString);
+        }
+      } catch (err) {
+        alert('위젯 코드를 내보내는 중 오류가 발생했습니다.');
+      }
+    }
+
+    function openImportModal() {
+      const input = document.getElementById('importWidgetJsonInput');
+      const errAlert = document.getElementById('importErrorAlert');
+      if (input) input.value = '';
+      if (errAlert) errAlert.classList.add('d-none');
+
+      const modalEl = document.getElementById('customWidgetImportModal');
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    }
+
+    async function submitImportWidget() {
+      const input = document.getElementById('importWidgetJsonInput');
+      const errAlert = document.getElementById('importErrorAlert');
+      const jsonText = input.value.trim();
+
+      if (!jsonText) {
+        if (errAlert) {
+          errAlert.textContent = 'JSON 코드를 입력해 주세요.';
+          errAlert.classList.remove('d-none');
+        }
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(jsonText);
+        if (parsed.format !== 'WorkSmarter-Widget-v1') {
+          throw new Error('지원하지 않는 위젯 포맷입니다. (WorkSmarter-Widget-v1)');
+        }
+      } catch (e) {
+        if (errAlert) {
+          errAlert.textContent = '올바른 WorkSmarter-Widget-v1 JSON 형식이 아닙니다: ' + e.message;
+          errAlert.classList.remove('d-none');
+        }
+        return;
+      }
+
+      const btn = document.getElementById('btnConfirmImport');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>가져오는 중...';
+
+      try {
+        const res = await fetch('/api/custom-widgets/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ widget_json: jsonText })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('위젯을 성공적으로 가져와 내 대시보드에 설치했습니다!');
+          window.location.reload();
+        } else {
+          if (errAlert) {
+            errAlert.textContent = data.message || '가져오기 실패';
+            errAlert.classList.remove('d-none');
+          }
+        }
+      } catch (err) {
+        if (errAlert) {
+          errAlert.textContent = '서버 통신 중 오류가 발생했습니다.';
+          errAlert.classList.remove('d-none');
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    async function toggleCustomWidgetDisplay(widgetId, enabled) {
+      const badge = document.getElementById('cw_status_' + widgetId);
+      if (badge) {
+        badge.textContent = enabled ? '대시보드 표시 중' : '숨김';
+        badge.className = enabled ? 'badge bg-success-subtle text-success border border-success-subtle' : 'badge bg-secondary-subtle text-secondary border border-secondary-subtle';
+      }
+
+      try {
+        await fetch(`/api/custom-widgets/\${widgetId}/toggle`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled })
+        });
+      } catch (err) {
+        console.error('Failed to toggle custom widget display:', err);
+      }
+    }
+  </script>
+
+  <!-- Modal: Custom Widget Builder (moduleplus.md) -->
+  <div class="modal fade" id="customWidgetBuilderModal" tabindex="-1" aria-labelledby="builderModalTitle" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header py-2 px-3 bg-light">
+          <h6 class="modal-title fw-bold d-flex align-items-center gap-2" id="builderModalTitle">
+            <i class="bi bi-magic text-primary"></i>
+            <span>커스텀 위젯 빌더 (Notion Style)</span>
+          </h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-3">
+          <div class="row g-3">
+            <!-- Left Column: Code Editor & Settings -->
+            <div class="col-lg-6 d-flex flex-column">
+              <!-- Basic Info -->
+              <div class="row g-2 mb-2">
+                <div class="col-md-7">
+                  <label class="form-label smaller fw-semibold text-secondary mb-1">위젯 제목 *</label>
+                  <input type="text" id="builderTitle" class="form-control form-control-sm" placeholder="예: 목표 D-Day 카운터" required oninput="document.getElementById('previewWidgetTitleDisplay').textContent = this.value || '미리보기'">
+                </div>
+                <div class="col-md-5">
+                  <label class="form-label smaller fw-semibold text-secondary mb-1">기본 크기 (가로x세로)</label>
+                  <div class="input-group input-group-sm">
+                    <select id="builderWidth" class="form-select">
+                      <% for(let i=1; i<=12; i++) { %>
+                        <option value="<%= i %>" <%= i===4 ? 'selected' : '' %>><%= i %>열 (가로)</option>
+                      <% } %>
+                    </select>
+                    <span class="input-group-text">x</span>
+                    <select id="builderHeight" class="form-select">
+                      <% for(let i=1; i<=10; i++) { %>
+                        <option value="<%= i %>" <%= i===3 ? 'selected' : '' %>><%= i %>행 (세로)</option>
+                      <% } %>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label smaller fw-semibold text-secondary mb-1">위젯 간단 설명</label>
+                <input type="text" id="builderDescription" class="form-control form-control-sm" placeholder="예: 남은 목표일까지의 D-Day를 자동으로 계산합니다.">
+              </div>
+
+              <!-- Starter Templates & Design Chips -->
+              <div class="p-2 border rounded bg-light mb-2">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                  <span class="smaller fw-bold text-dark"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>스타터 템플릿:</span>
+                  <div class="d-flex gap-1">
+                    <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 smaller fw-semibold starter-btn" onclick="loadStarterTemplate('dday')">
+                      🎯 D-Day 카운터
+                    </button>
+                    <button type="button" class="btn btn-outline-success btn-sm py-0 px-2 smaller fw-semibold starter-btn" onclick="loadStarterTemplate('completion')">
+                      📊 오늘의 완료율 미니 카드
+                    </button>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center flex-wrap gap-1 mt-2 pt-2 border-top">
+                  <span class="smaller fw-bold text-secondary me-1"><i class="bi bi-palette-fill text-primary me-1"></i>디자인 칩:</span>
+                  <span class="design-chip" onclick="insertCodeChip('.ws-btn')" title="노션 스타일 기본 버튼 삽입">.ws-btn</span>
+                  <span class="design-chip" onclick="insertCodeChip('.ws-btn-primary')" title="강조 버튼 삽입">.ws-btn-primary</span>
+                  <span class="design-chip" onclick="insertCodeChip('.ws-input')" title="슬림 입력창 삽입">.ws-input</span>
+                  <span class="design-chip" onclick="insertCodeChip('.ws-badge')" title="태그 배지 삽입">.ws-badge</span>
+                  <span class="design-chip" onclick="insertCodeChip('.ws-card')" title="내부 카드 박스 삽입">.ws-card</span>
+                  <span class="design-chip" onclick="insertCodeChip('.ws-title')" title="타이틀 삽입">.ws-title</span>
+                  <span class="design-chip" onclick="insertCodeChip('.ws-muted')" title="보조 설명 삽입">.ws-muted</span>
+                </div>
+              </div>
+
+              <!-- Code Editor Tabs -->
+              <ul class="nav nav-tabs nav-fill small mb-2" id="builderCodeTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active py-1 fw-semibold" id="tab-html-btn" type="button" onclick="switchEditorTab('html')">
+                    <i class="bi bi-filetype-html text-danger me-1"></i>HTML
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link py-1 fw-semibold" id="tab-css-btn" type="button" onclick="switchEditorTab('css')">
+                    <i class="bi bi-filetype-css text-primary me-1"></i>CSS
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link py-1 fw-semibold" id="tab-js-btn" type="button" onclick="switchEditorTab('js')">
+                    <i class="bi bi-filetype-js text-warning me-1"></i>JavaScript
+                  </button>
+                </li>
+              </ul>
+
+              <!-- Textareas -->
+              <div class="flex-grow-1">
+                <div class="builder-tab-pane active" id="pane-html">
+                  <textarea id="builderHtmlCode" class="code-editor-textarea" placeholder="HTML 코드를 작성하세요... (공용 .ws-* 클래스 사용 가능)" oninput="onBuilderCodeInput()"></textarea>
+                </div>
+                <div class="builder-tab-pane" id="pane-css">
+                  <textarea id="builderCssCode" class="code-editor-textarea" placeholder="CSS 코드를 작성하세요... (--ws-* 변수 토큰 활용 가능)" oninput="onBuilderCodeInput()"></textarea>
+                </div>
+                <div class="builder-tab-pane" id="pane-js">
+                  <textarea id="builderJsCode" class="code-editor-textarea" placeholder="// JavaScript 코드를 작성하세요...&#10;// window.addEventListener('message', e => { if (e.data.type === 'WS_CONTEXT') { ... } });" oninput="onBuilderCodeInput()"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Real-time Live Preview -->
+            <div class="col-lg-6 d-flex flex-column">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <label class="form-label smaller fw-semibold text-secondary mb-0">
+                  <i class="bi bi-eye-fill text-info me-1"></i>실시간 노션 스타일 미리보기 (<code>iframe</code> sandbox)
+                </label>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 smaller" onclick="refreshBuilderPreview()">
+                  <i class="bi bi-arrow-clockwise me-1"></i>새로고침
+                </button>
+              </div>
+
+              <!-- Preview Frame Box -->
+              <div class="border rounded-3 p-3 bg-white shadow-sm flex-grow-1 d-flex flex-column" style="min-height: 400px; background-color: #F7F7F5;">
+                <div class="d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom text-muted smaller">
+                  <span id="previewWidgetTitleDisplay" class="fw-semibold text-dark text-truncate">🎯 목표 D-Day 카운터</span>
+                  <span class="badge bg-light text-secondary border">Design System 자동 주입</span>
+                </div>
+                <iframe id="builderPreviewIframe" class="w-100 flex-grow-1 border-0 rounded bg-white shadow-xs" sandbox="allow-scripts" style="min-height: 340px;"></iframe>
+              </div>
+              <div class="smaller text-muted mt-2">
+                <i class="bi bi-shield-check text-success me-1"></i>보안을 위해 <code>allow-scripts</code> 샌드박스로 격리되며, WorkSmarter 일정 요약 데이터(<code>WS_CONTEXT</code>)가 자동으로 브릿지됩니다.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer py-2 px-3 bg-light d-flex justify-content-between">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary btn-sm fw-semibold" id="btnSaveBuilderWidget" onclick="saveCustomWidgetFromBuilder()">
+            <i class="bi bi-check-lg me-1"></i>위젯 저장하기
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Import Custom Widget JSON (moduleplus.md) -->
+  <div class="modal fade" id="customWidgetImportModal" tabindex="-1" aria-labelledby="importModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header py-2 px-3 bg-light">
+          <h6 class="modal-title fw-bold d-flex align-items-center gap-2" id="importModalTitle">
+            <i class="bi bi-box-arrow-in-down text-primary"></i>
+            <span>JSON 코드로 위젯 가져오기</span>
+          </h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-3">
+          <p class="small text-muted mb-2">
+            다른 사용자가 내보내기(공유)한 <strong>WorkSmarter-Widget-v1</strong> JSON 코드를 아래에 붙여넣으세요. 검증 후 내 대시보드에 즉시 설치됩니다. (최대 50KB)
+          </p>
+          <div class="mb-3">
+            <textarea id="importWidgetJsonInput" class="form-control code-editor-textarea" style="height: 180px; font-size: 12px;" placeholder='{ "format": "WorkSmarter-Widget-v1", "title": "...", ... }'></textarea>
+          </div>
+          <div id="importErrorAlert" class="alert alert-danger py-2 small d-none mb-0"></div>
+        </div>
+        <div class="modal-footer py-2 px-3 bg-light">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">닫기</button>
+          <button type="button" class="btn btn-primary btn-sm fw-semibold" id="btnConfirmImport" onclick="submitImportWidget()">
+            <i class="bi bi-download me-1"></i>가져오기 (설치)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </script>
+  <%- include('partials/mini-timer') %>
+</body>
+</html>

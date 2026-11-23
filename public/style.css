@@ -1,0 +1,1546 @@
+:root {
+  --primary-color: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #e0e7ff;
+  --secondary-color: #06b6d4;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --dark-bg: #0f172a;
+  --card-bg: #ffffff;
+  --body-bg: #f8fafc;
+  --border-color: #e2e8f0;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --border-radius: 14px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+}
+
+body {
+  background-color: var(--body-bg);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: -0.015em;
+  min-height: 100vh;
+}
+
+/* Navbar */
+.navbar-custom {
+  background: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+.navbar-brand-custom {
+  font-weight: 800;
+  font-size: 1.35rem;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Card Styling */
+.card-custom {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-custom:hover {
+  box-shadow: var(--shadow-md);
+}
+.card-header-custom {
+  background: transparent;
+  border-bottom: 1px solid var(--border-color);
+  padding: 16px 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Pre-line text for detailed notes */
+.preserve-lines {
+  white-space: pre-line;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+/* Top 3 Priority MIT Card */
+.top3-card {
+  border-left: 5px solid var(--primary-color) !important;
+  background: #ffffff;
+  position: relative;
+  overflow: hidden;
+}
+.top3-badge {
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+/* Pomodoro Timer Widget */
+.pomodoro-box {
+  background: linear-gradient(145deg, #1e1b4b, #312e81);
+  color: #ffffff;
+  border-radius: var(--border-radius);
+  padding: 24px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+.pomodoro-box::after {
+  content: "";
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 140px;
+  height: 140px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+}
+.pomodoro-display {
+  font-size: 3.5rem;
+  font-weight: 800;
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: 2px;
+  margin: 15px 0;
+  text-shadow: 0 0 15px rgba(224, 231, 255, 0.4);
+}
+.btn-timer {
+  border-radius: 30px;
+  font-weight: 600;
+  padding: 8px 18px;
+  transition: all 0.2s;
+}
+
+/* Subtask Checklist */
+.subtask-list {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 0;
+}
+.subtask-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dashed #f1f5f9;
+  font-size: 0.9rem;
+}
+.subtask-item:last-child {
+  border-bottom: none;
+}
+.subtask-item.done span {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* Kanban Board Layout */
+.kanban-board {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+.kanban-col {
+  flex: 1;
+  min-width: 260px;
+  background: #f1f5f9;
+  border-radius: var(--border-radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+}
+.kanban-col-header {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.kanban-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 250px;
+}
+.kanban-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s;
+}
+.kanban-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.kanban-card.done-card {
+  opacity: 0.85;
+  background: #f8fafc;
+}
+
+/* Monthly Calendar View */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-top: 10px;
+}
+.calendar-header-day {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  padding: 6px 0;
+}
+.calendar-cell {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  min-height: 80px;
+  padding: 6px;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.2s;
+}
+.calendar-cell.today {
+  border: 2px solid var(--primary-color);
+  background: #f5f3ff;
+}
+.calendar-cell.other-month {
+  background: #f8fafc;
+  opacity: 0.4;
+}
+.calendar-cell .day-num {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.calendar-event-badge {
+  display: block;
+  font-size: 0.7rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: var(--primary-light);
+  color: var(--primary-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+/* Telegram Assistant Widget */
+.tg-status-box {
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.tg-status-connected {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+.tg-status-disconnected {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+/* Category Badges */
+.badge-cat-업무 {
+  background-color: #e0e7ff;
+  color: #3730a3;
+}
+.badge-cat-개인 {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+.badge-cat-팀프로젝트 {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+.badge-cat-자기계발 {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+/* Notification Log List */
+.log-item {
+  font-size: 0.85rem;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.log-item:last-child {
+  border-bottom: none;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Bulk Action Bar & Checkboxes */
+.bulk-action-bar {
+  background: #ffffff;
+  border: 1px solid #c7d2fe;
+  border-radius: var(--border-radius);
+  animation: bulkSlideDown 0.25s ease-out;
+}
+@keyframes bulkSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.schedule-select-checkbox {
+  width: 1.15rem;
+  height: 1.15rem;
+  cursor: pointer;
+  border: 1.5px solid #94a3b8;
+}
+.schedule-select-checkbox:checked {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* Calendar Holiday Badges */
+.calendar-holiday-badge {
+  display: block;
+  font-size: 0.68rem;
+  padding: 1px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.holiday-badge-KR {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+.holiday-badge-JP {
+  background-color: #f3e8ff;
+  color: #6b21a8;
+  border: 1px solid #d8b4fe;
+}
+.holiday-badge-CN {
+  background-color: #ffedd5;
+  color: #c2410c;
+  border: 1px solid #fdba74;
+}
+.holiday-badge-US {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+/* Custom Sound Manager */
+.custom-sound-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+.cursor-pointer {
+  cursor: pointer;
+}
+.letter-spacing {
+  letter-spacing: 2px;
+}
+
+/* ==========================================
+   Notion-Style Sidebar & Workspace Layout
+   ========================================== */
+.app-wrapper {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.notion-sidebar {
+  width: 240px;
+  min-width: 240px;
+  background-color: #f8fafc;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 1030;
+  transition: width 0.2s ease, min-width 0.2s ease, transform 0.25s ease-in-out;
+}
+
+/* Desktop Collapsed Mini Sidebar (64px) */
+@media (min-width: 992px) {
+  .app-wrapper.sidebar-collapsed .notion-sidebar {
+    width: 64px;
+    min-width: 64px;
+  }
+  .app-wrapper.sidebar-collapsed .sidebar-brand-box {
+    padding: 14px 8px;
+    justify-content: center;
+  }
+  .app-wrapper.sidebar-collapsed .sidebar-brand-box a {
+    display: none !important;
+  }
+  .app-wrapper.sidebar-collapsed .sidebar-brand-box a span,
+  .app-wrapper.sidebar-collapsed .sidebar-user-box .overflow-hidden,
+  .app-wrapper.sidebar-collapsed .sidebar-section-title,
+  .app-wrapper.sidebar-collapsed .sidebar-link span,
+  .app-wrapper.sidebar-collapsed .sidebar-link .badge,
+  .app-wrapper.sidebar-collapsed .sidebar-footer span {
+    display: none !important;
+  }
+  .app-wrapper.sidebar-collapsed .sidebar-link {
+    justify-content: center;
+    padding: 10px 0;
+    margin: 4px 0;
+  }
+  .app-wrapper.sidebar-collapsed .sidebar-link i {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+  .app-wrapper.sidebar-collapsed .sidebar-user-box {
+    justify-content: center;
+    padding: 12px 0;
+  }
+  .app-wrapper.sidebar-collapsed .sidebar-avatar {
+    width: 34px;
+    height: 34px;
+  }
+  .app-wrapper.sidebar-collapsed .sidebar-footer {
+    padding: 10px 8px;
+  }
+  .app-wrapper.sidebar-collapsed .sidebar-footer a {
+    justify-content: center;
+    padding: 6px 0;
+  }
+}
+
+.app-main-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--body-bg);
+}
+
+.sidebar-brand-box {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-color);
+  background: #ffffff;
+}
+
+.sidebar-user-box {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
+  background: #ffffff;
+}
+
+.sidebar-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary-color), #818cf8);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.sidebar-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 14px 4px 14px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  color: #334155;
+  font-size: 0.88rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  margin: 2px 8px;
+}
+
+.sidebar-link:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.sidebar-link.active {
+  background-color: var(--primary-light);
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+.sidebar-link i {
+  font-size: 1.15rem;
+}
+
+.sidebar-footer {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border-color);
+  background: #ffffff;
+  margin-top: auto;
+}
+
+/* Mobile responsive sidebar */
+@media (max-width: 991.98px) {
+  .notion-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-lg);
+  }
+  .notion-sidebar.show {
+    transform: translateX(0);
+  }
+  .sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1025;
+    display: none;
+  }
+  .sidebar-backdrop.show {
+    display: block;
+  }
+}
+
+/* ==========================================
+   Team Workspace Styles
+   ========================================== */
+.team-header-box {
+  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Team Tab Chips & Arrow Order Controls */
+.team-tab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.83rem;
+  transition: all 0.18s ease;
+}
+.team-tab-chip:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+.team-tab-chip.active {
+  background: #eff6ff;
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  font-weight: 600;
+  box-shadow: 0 1px 6px rgba(35, 131, 226, 0.18);
+}
+.team-tab-move-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+.btn-team-move {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+.btn-team-move:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+.btn-team-move:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+.team-tab-chip.active .btn-team-move {
+  color: #93c5fd;
+}
+.team-tab-chip.active .btn-team-move:hover:not(:disabled) {
+  background: #dbeafe;
+  color: var(--primary-color);
+}
+.team-tab-link {
+  color: inherit;
+  cursor: pointer;
+}
+.team-tab-link:hover {
+  color: inherit;
+}
+.team-tab-title {
+  color: inherit;
+}
+
+.invite-code-pill {
+  background: #f1f5f9;
+  border: 1px dashed #cbd5e1;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.badge-role-LEADER {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  font-weight: 600;
+}
+.badge-role-MANAGER {
+  background-color: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+  font-weight: 600;
+}
+.badge-role-MEMBER {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  font-weight: 500;
+}
+
+.badge-cat-공지 {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+.badge-cat-특이사항 {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+.badge-cat-회의록 {
+  background-color: #f3e8ff;
+  color: #6b21a8;
+}
+.badge-cat-이슈 {
+  background-color: #ffedd5;
+  color: #c2410c;
+}
+
+.note-pinned-card {
+  border-left: 5px solid var(--warning-color) !important;
+  background-color: #fffdf5;
+}
+
+.team-schedule-item {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 14px;
+  background: #ffffff;
+  transition: all 0.2s;
+}
+.team-schedule-item:hover {
+  box-shadow: var(--shadow-sm);
+  border-color: #cbd5e1;
+}
+.team-schedule-item.status-done {
+  background: #f8fafc;
+  opacity: 0.85;
+}
+
+/* ==========================================
+   Bootstrap Modal & Backdrop z-index Fix
+   ========================================== */
+.modal-backdrop {
+  z-index: 1040 !important;
+}
+.modal {
+  z-index: 1055 !important;
+}
+
+/* ==========================================
+   Notion-Style Centered Alert / Confirm Modal
+   ========================================== */
+.notion-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 1070;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease-in-out;
+}
+.notion-modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.notion-dialog-box {
+  background: #FFFFFF;
+  border: 1px solid #E6E6E4;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 420px;
+  padding: 20px;
+  transform: scale(0.95);
+  transition: transform 0.15s ease-out;
+}
+.notion-modal-overlay.active .notion-dialog-box {
+  transform: scale(1);
+}
+.notion-dialog-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #37352F;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.notion-dialog-message {
+  font-size: 13px;
+  color: #55534E;
+  line-height: 1.5;
+  margin-bottom: 18px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.notion-dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.notion-dialog-btn {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.notion-dialog-btn.cancel {
+  background: #F1F1EF;
+  color: #37352F;
+  border: 1px solid #D3D3D0;
+}
+.notion-dialog-btn.cancel:hover {
+  background: #E6E6E4;
+}
+.notion-dialog-btn.confirm {
+  background: #2383E2;
+  color: #FFFFFF;
+}
+.notion-dialog-btn.confirm:hover {
+  background: #1B6FC2;
+}
+
+/* ==========================================
+   Notion-Style Context Menu
+   ========================================== */
+.notion-context-menu {
+  position: fixed;
+  z-index: 1065;
+  background: #FFFFFF;
+  border: 1px solid #E6E6E4;
+  border-radius: 6px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  min-width: 190px;
+  display: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  animation: ctxFadeIn 0.1s ease-out;
+}
+@keyframes ctxFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #37352F;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  text-decoration: none;
+  transition: background 0.1s;
+}
+.ctx-item:hover {
+  background: #F1F1EF;
+  color: #111111;
+}
+.ctx-item.danger {
+  color: #E03E3E;
+}
+.ctx-item.danger:hover {
+  background: #FBE4E4;
+  color: #C52828;
+}
+.ctx-divider {
+  height: 1px;
+  background: #E6E6E4;
+  margin: 4px 0;
+}
+
+/* ==========================================
+   Top 3 Dropzone & Two-Way Drag & Drop (top3.md)
+   ========================================== */
+.top3-container {
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.top3-container.top3-drag-highlight {
+  border: 1.5px dashed #2383E2 !important;
+  background-color: #F0F7FF !important;
+}
+
+.top3-card {
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.top3-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+.top3-card:active {
+  cursor: grabbing;
+}
+
+.top3-remove-btn {
+  color: #94a3b8;
+  transition: color 0.15s ease;
+  line-height: 1;
+}
+
+.top3-remove-btn:hover {
+  color: #dc3545 !important;
+}
+
+.kanban-card[draggable="true"] {
+  cursor: grab;
+}
+
+.kanban-card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* ==========================================
+   Team Schedule Card Header & Overflow Fix (testui4.md)
+   ========================================== */
+.team-schedule-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.team-schedule-badge-team,
+.team-schedule-badge-author {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================
+   Kanban Column Drag & Drop Highlight (todos1.md)
+   ========================================== */
+.kanban-col.kanban-drag-highlight,
+.kanban-column.kanban-drag-highlight {
+  background-color: #EFEFED !important;
+  outline: 1.5px dashed #2383E2 !important;
+  outline-offset: -2px;
+  border-radius: 8px;
+  transition: background-color 0.15s ease, outline 0.15s ease;
+}
+
+/* ==========================================
+   Calendar Status-based Chip Styles (stastics.md)
+   ========================================== */
+.calendar-event-badge.cal-status-TODO {
+  background-color: #F1F1EF !important;
+  color: #37352F !important;
+  border-left: 3px solid #9B9A97 !important;
+}
+
+.calendar-event-badge.cal-status-IN_PROGRESS {
+  background-color: #E7F3F8 !important;
+  color: #1D4ED8 !important;
+  border-left: 3px solid #2383E2 !important;
+}
+
+.calendar-event-badge.cal-status-DONE {
+  background-color: #EDF3EC !important;
+  color: #1E6F50 !important;
+  border-left: 3px solid #2E8540 !important;
+  text-decoration: line-through !important;
+  opacity: 0.85;
+}
+
+/* Legend badges */
+.badge.cal-status-TODO {
+  background-color: #F1F1EF !important;
+  color: #37352F !important;
+  border-left: 3px solid #9B9A97 !important;
+}
+.badge.cal-status-IN_PROGRESS {
+  background-color: #E7F3F8 !important;
+  color: #1D4ED8 !important;
+  border-left: 3px solid #2383E2 !important;
+}
+.badge.cal-status-DONE {
+  background-color: #EDF3EC !important;
+  color: #1E6F50 !important;
+  border-left: 3px solid #2E8540 !important;
+}
+
+/* ==========================================
+   Subtask Inline Form & Delete Button (checklist.md)
+   ========================================== */
+.subtask-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+  gap: 4px;
+}
+
+.subtask-delete-btn {
+  background: none;
+  border: none;
+  padding: 0 4px;
+  color: #94a3b8;
+  font-size: 0.95rem;
+  line-height: 1;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  opacity: 0.7;
+}
+
+.subtask-item:hover .subtask-delete-btn {
+  opacity: 1;
+}
+
+.subtask-delete-btn:hover {
+  color: #dc3545 !important;
+  background-color: #fee2e2;
+}
+
+.subtask-quick-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.subtask-quick-input {
+  height: 28px !important;
+  font-size: 0.78rem !important;
+  padding: 2px 8px !important;
+}
+
+.subtask-quick-btn {
+  height: 28px !important;
+  padding: 0 8px !important;
+  font-size: 0.78rem !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* ==========================================
+   Notes & Documentation Workspace (newdawn.md)
+   ========================================== */
+.note-grid-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.note-grid-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+  border-color: #cbd5e1;
+}
+
+.note-card-title {
+  color: #1e293b;
+  font-size: 1.05rem;
+}
+
+.note-card-snippet {
+  line-height: 1.5;
+  color: #64748b;
+}
+
+/* Side Drawer / Detail Editing Panel */
+.notion-note-drawer {
+  position: fixed;
+  top: 0;
+  right: -600px;
+  width: 580px;
+  max-width: 100vw;
+  height: 100vh;
+  background-color: #ffffff;
+  z-index: 1055;
+  transition: right 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+}
+
+.notion-note-drawer.open {
+  right: 0;
+}
+
+.notion-drawer-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 1050;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.notion-drawer-backdrop.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.note-title-input {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.note-title-input:focus {
+  box-shadow: none;
+  background-color: transparent;
+}
+
+.note-content-textarea {
+  resize: vertical;
+  line-height: 1.7;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.note-content-textarea:focus {
+  box-shadow: none;
+}
+
+.note-preview-pane {
+  background-color: #f8fafc;
+  line-height: 1.7;
+  font-size: 0.92rem;
+  color: #1e293b;
+  word-break: break-word;
+}
+
+/* Link Chips */
+.link-chip {
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  transition: all 0.15s ease;
+}
+
+.link-chip:hover {
+  background-color: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+/* Undated Schedules Summary Bar */
+.undated-summary-bar {
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.undated-summary-bar .card-header:hover {
+  background-color: #e2e8f0 !important;
+}
+
+.undated-summary-bar .card-header[aria-expanded="true"] .toggle-collapse-icon {
+  transform: rotate(180deg);
+}
+
+.toggle-collapse-icon {
+  transition: transform 0.2s ease;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* ======================================================== */
+/* Modular Dashboard System Styles (modules.md)              */
+/* ======================================================== */
+
+/* GridStack Overrides & Card Fitting */
+.grid-stack {
+  min-height: 400px;
+}
+
+.grid-stack-item-content {
+  overflow: visible !important;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.grid-stack-item-content > .card-custom {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.grid-stack-item-content > .card-custom > .card-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Widget Drag Handle Bar */
+.widget-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background-color: #f8fafc;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  user-select: none;
+  border-top-left-radius: var(--border-radius);
+  border-top-right-radius: var(--border-radius);
+  cursor: default;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.widget-drag-handle .handle-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Edit Mode Visual Cues */
+.grid-stack.dashboard-edit-mode .widget-drag-handle {
+  cursor: grab;
+  background-color: #e0e7ff;
+  color: #3730a3;
+}
+
+.grid-stack.dashboard-edit-mode .widget-drag-handle:active {
+  cursor: grabbing;
+}
+
+.grid-stack.dashboard-edit-mode .grid-stack-item-content > .card-custom {
+  border: 2px dashed #4f46e5 !important;
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.12) !important;
+}
+
+.grid-stack.dashboard-edit-mode .ui-resizable-handle {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+/* Clock Widget */
+.clock-widget-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+}
+
+.clock-time {
+  font-size: 2.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: #1e1b4b;
+  line-height: 1.1;
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, monospace;
+}
+
+.clock-date {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+
+/* Memo Widget */
+.memo-widget-body {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  height: 100%;
+}
+
+.memo-textarea {
+  width: 100%;
+  flex: 1 1 auto;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent;
+  resize: none;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: #1e293b;
+  padding: 4px;
+  font-family: inherit;
+}
+
+.memo-textarea::placeholder {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+/* Top 3 & Kanban cards inside widgets scroll nicely */
+.top3-dropzone-body {
+  overflow-y: auto;
+}
+
+/* ==========================================
+   PIP (Picture-in-Picture) Floating Window (ploat.md)
+   ========================================== */
+.pip-floating-window {
+  position: fixed;
+  z-index: 1030;
+  background: #FFFFFF;
+  border: 1px solid #D3D3D0;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+  display: flex;
+  flex-direction: column;
+  min-width: 260px;
+  min-height: 180px;
+  resize: both;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.pip-floating-window.pip-pinned {
+  z-index: 1070 !important;
+  border-color: #2383E2 !important;
+  box-shadow: 0 16px 40px rgba(35, 131, 226, 0.22), 0 4px 14px rgba(0, 0, 0, 0.14) !important;
+}
+
+.pip-header {
+  height: 34px;
+  min-height: 34px;
+  max-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  background: #FBFBFA;
+  border-bottom: 1px solid #E9E9E7;
+  user-select: none;
+  cursor: grab;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+.pip-header:active {
+  cursor: grabbing;
+}
+
+.pip-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #37352F;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 auto;
+}
+
+.pip-header-left i.bi-grip-vertical {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.pip-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pip-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.pip-btn {
+  border: none;
+  background: transparent;
+  padding: 3px 6px;
+  border-radius: 4px;
+  color: #787774;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  line-height: 1;
+}
+
+.pip-btn:hover {
+  background-color: #EFEFEF;
+  color: #37352F;
+}
+
+.pip-btn.pip-pin-active {
+  color: #2383E2 !important;
+  background-color: rgba(35, 131, 226, 0.12) !important;
+}
+
+.pip-body {
+  flex: 1 1 auto;
+  overflow: auto;
+  background: #FFFFFF;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.pip-body > .card-custom {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  flex: 1 1 auto;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.pip-body > .card-custom > .widget-drag-handle {
+  display: none !important;
+}
+
+/* Grid Placeholder for PIP */
+.pip-grid-placeholder {
+  width: 100%;
+  height: 100%;
+  border: 1.5px dashed #D3D3D0;
+  background: #F7F7F5;
+  border-radius: 6px;
+  color: #787774;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.25rem;
+  box-sizing: border-box;
+}
+
+.pip-grid-placeholder i.bi-pip {
+  font-size: 1.8rem;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.btn-pip-toggle {
+  font-size: 0.72rem;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #64748b;
+  border-color: #cbd5e1;
+  background: #ffffff;
+  transition: all 0.15s ease;
+  line-height: 1.3;
+}
+
+.btn-pip-toggle:hover {
+  color: #2383E2;
+  border-color: #2383E2;
+  background: rgba(35, 131, 226, 0.05);
+}
+
+/* ==========================================
+   Custom Widget Builder & Market Styles (moduleplus.md)
+   ========================================== */
+.custom-widget-card {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.custom-widget-body {
+  position: relative;
+  width: 100%;
+  background: #ffffff;
+}
+
+.custom-widget-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.builder-tab-pane {
+  display: none;
+}
+.builder-tab-pane.active {
+  display: block;
+}
+
+.code-editor-textarea {
+  font-family: 'Consolas', 'Fira Code', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  tab-size: 2;
+  white-space: pre;
+  background-color: #fbfbfa;
+  color: #24292e;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  width: 100%;
+  height: 260px;
+  padding: 10px;
+  outline: none;
+  resize: vertical;
+}
+
+.code-editor-textarea:focus {
+  background-color: #ffffff;
+  border-color: #2383E2;
+  box-shadow: 0 0 0 2px rgba(35, 131, 226, 0.15);
+}
+
+.design-chip {
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #d3d3d0;
+  background: #ffffff;
+  color: #37352f;
+  transition: all 0.15s ease;
+  user-select: none;
+  display: inline-block;
+}
+
+.design-chip:hover {
+  background: #2383E2;
+  color: #ffffff;
+  border-color: #2383E2;
+}
+
+.starter-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}

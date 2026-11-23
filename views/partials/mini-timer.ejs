@@ -1,0 +1,1450 @@
+<!-- ======================================================== -->
+<!-- GLOBAL MINI FLOATING POMODORO TIMER & NOTION TEAM TOASTS -->
+<!-- ======================================================== -->
+
+<!-- 1. Floating Mini Pomodoro Bar (Top Right) -->
+<div id="globalMiniTimer" class="global-mini-timer-wrapper" style="display: none;">
+  <!-- Collapsed Bar Mode -->
+  <div id="miniTimerCollapsed" class="mini-timer-bar">
+    <div class="d-flex align-items-center gap-2 overflow-hidden flex-grow-1" style="cursor: pointer;" onclick="toggleMiniTimerExpand(true)">
+      <span id="miniTimerDot" class="mini-timer-dot running"></span>
+      <span id="miniTimerTitleCollapsed" class="mini-timer-title-collapsed text-truncate" title="일반 집중 세션">일반 집중 세션</span>
+      <span id="miniTimerDigitsCollapsed" class="mini-timer-digits-collapsed">25:00</span>
+    </div>
+    <div class="d-flex align-items-center gap-1 ms-2">
+      <button type="button" class="mini-btn-icon" id="miniTimerToggleBtn" onclick="toggleMiniTimerPlayPause(event)" title="시작 / 일시정지">
+        <i class="bi bi-pause-fill" id="miniTimerToggleIcon"></i>
+      </button>
+      <button type="button" class="mini-btn-icon" onclick="toggleMiniTimerExpand(true)" title="자세히 보기">
+        <i class="bi bi-chevron-down"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Expanded Card Mode -->
+  <div id="miniTimerExpanded" class="mini-timer-card" style="display: none;">
+    <div class="mini-timer-header">
+      <div class="d-flex align-items-center gap-2 overflow-hidden">
+        <i class="bi bi-stopwatch-fill text-primary"></i>
+        <span id="miniTimerTitleExpanded" class="fw-semibold small text-truncate" style="max-width: 200px;">일반 집중 세션</span>
+      </div>
+      <button type="button" class="mini-btn-icon" onclick="toggleMiniTimerExpand(false)" title="축소하기">
+        <i class="bi bi-chevron-up"></i>
+      </button>
+    </div>
+
+    <div class="mini-timer-body text-center py-2">
+      <div id="miniTimerDigitsExpanded" class="mini-timer-digits-expanded">25:00</div>
+      <div class="mini-progress-track mb-2">
+        <div id="miniTimerProgressBar" class="mini-progress-bar" style="width: 100%;"></div>
+      </div>
+
+      <!-- Quick Session Length Selection -->
+      <div class="d-flex justify-content-center gap-1 mb-2">
+        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2 rounded" style="font-size: 11px;" onclick="resetMiniTimer(25)">25분</button>
+        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2 rounded" style="font-size: 11px;" onclick="resetMiniTimer(50)">50분</button>
+        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2 rounded" style="font-size: 11px;" onclick="resetMiniTimer(1)">1분(시연)</button>
+      </div>
+
+      <!-- Sound Selection -->
+      <div class="d-flex align-items-center gap-1 justify-content-center mb-1">
+        <label for="miniTimerSoundSelect" class="smaller text-muted"><i class="bi bi-volume-up"></i></label>
+        <select id="miniTimerSoundSelect" class="form-select form-select-sm py-0 ps-1 pe-4" style="font-size: 11px; height: 24px; width: 140px;" onchange="updateMiniTimerSound(this.value)">
+          <optgroup label="기본 알림음" id="miniTimerPresetGroup">
+            <option value="chime">차임벨 (맑음)</option>
+            <option value="alarm">디지털 알람</option>
+            <option value="marimba">마림바 벨</option>
+          </optgroup>
+          <optgroup label="내 오디오 파일" id="miniTimerCustomGroup">
+          </optgroup>
+        </select>
+        <button type="button" class="btn btn-sm btn-light border py-0 px-1" style="font-size: 11px; height: 24px;" onclick="previewMiniTimerSound()" title="미리듣기">🔊</button>
+      </div>
+    </div>
+
+    <div class="mini-timer-footer d-flex align-items-center justify-content-between pt-2 border-top">
+      <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 12px; height: 28px;" onclick="resetMiniTimer()" title="초기화">
+        <i class="bi bi-arrow-counterclockwise"></i> 초기화
+      </button>
+      <div class="d-flex gap-1">
+        <button type="button" class="btn btn-sm btn-success py-0 px-2" style="font-size: 12px; height: 28px;" onclick="completeMiniTimerManually()">
+          <i class="bi bi-check-lg me-1"></i>완료
+        </button>
+        <button type="button" class="btn btn-sm btn-primary py-0 px-3 fw-semibold" style="font-size: 12px; height: 28px;" id="miniTimerMainBtn" onclick="toggleMiniTimerPlayPause(event)">
+          <i class="bi bi-pause-fill me-1" id="miniTimerMainIcon"></i><span id="miniTimerMainText">일시정지</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Real-time Team Activity Toast Notification Container (Bottom Right) -->
+<div id="teamToastContainer" class="team-toast-container" aria-live="polite" aria-atomic="true"></div>
+
+<!-- 3. Notion-Style Centered Custom Modal (Alert / Confirm) -->
+<div id="notionCustomModal" class="notion-modal-overlay">
+  <div class="notion-dialog-box" role="dialog" aria-modal="true">
+    <div class="notion-dialog-title" id="notionModalTitle">
+      <i class="bi bi-info-circle-fill text-primary" id="notionModalIcon"></i>
+      <span id="notionModalTitleText">알림</span>
+    </div>
+    <div class="notion-dialog-message" id="notionModalMessage">내용</div>
+    <div class="notion-dialog-actions">
+      <button type="button" class="notion-dialog-btn cancel" id="notionModalCancelBtn" style="display: none;">취소</button>
+      <button type="button" class="notion-dialog-btn confirm" id="notionModalConfirmBtn">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- 4. Notion-Style Context Menu for Schedules -->
+<div id="notionContextMenu" class="notion-context-menu">
+  <div class="px-2 py-1 smaller fw-bold text-muted border-bottom mb-1" id="ctxScheduleTitle">일정 관리</div>
+  <button type="button" class="ctx-item" id="ctxActionEdit">
+    <i class="bi bi-pencil text-primary"></i> <span>일정 수정</span>
+  </button>
+  <button type="button" class="ctx-item" id="ctxActionShare">
+    <i class="bi bi-people text-info"></i> <span>소속 팀에 공유(업로드)</span>
+  </button>
+  <div class="ctx-divider"></div>
+  <div class="px-2 py-1 smaller text-muted fw-semibold">상태 변경</div>
+  <button type="button" class="ctx-item" id="ctxStatusTodo">
+    <i class="bi bi-circle text-secondary"></i> <span>대기 (TODO)</span>
+  </button>
+  <button type="button" class="ctx-item" id="ctxStatusInProgress">
+    <i class="bi bi-hourglass-split text-primary"></i> <span>진행 중 (IN_PROGRESS)</span>
+  </button>
+  <button type="button" class="ctx-item" id="ctxStatusDone">
+    <i class="bi bi-check2-circle text-success"></i> <span>완료 (DONE)</span>
+  </button>
+  <div class="ctx-divider"></div>
+  <button type="button" class="ctx-item danger" id="ctxActionDelete">
+    <i class="bi bi-trash"></i> <span>일정 삭제</span>
+  </button>
+</div>
+
+<!-- 5. Quick Share to Team Modal -->
+<div class="modal fade text-start" id="quickShareTeamModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-bold"><i class="bi bi-share me-1 text-primary"></i>팀으로 일정 공유</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="quickShareTeamForm" action="" method="POST">
+        <div class="modal-body p-3">
+          <p class="small text-muted mb-2">선택한 개인 일정을 소속 팀 워크스페이스로 복사 등록합니다.</p>
+          <div class="mb-2">
+            <label class="form-label small fw-semibold text-secondary">공유 대상 팀 선택</label>
+            <select name="team_id" class="form-select form-select-sm" id="quickShareTeamSelect" required>
+              <option value="">소속 팀을 선택하세요</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">취소</button>
+          <button type="submit" class="btn btn-primary btn-sm fw-semibold">팀에 공유</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- STYLES FOR MINI TIMER & TEAM TOAST NOTIFICATIONS         -->
+<!-- ======================================================== -->
+<style>
+  /* Fixed Top-Right Mini Pomodoro Bar */
+  .global-mini-timer-wrapper {
+    position: fixed;
+    top: 16px;
+    right: 24px;
+    z-index: 1050;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
+  }
+
+  .mini-timer-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 36px;
+    padding: 0 12px;
+    background: #FFFFFF;
+    border: 1px solid #E6E6E4;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s ease;
+  }
+  .mini-timer-bar:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #D3D3D0;
+  }
+
+  .mini-timer-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .mini-timer-dot.running {
+    background-color: #2383E2;
+    box-shadow: 0 0 6px rgba(35, 131, 226, 0.6);
+    animation: pulseDot 2s infinite ease-in-out;
+  }
+  .mini-timer-dot.paused {
+    background-color: #787774;
+  }
+
+  @keyframes pulseDot {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .mini-timer-title-collapsed {
+    max-width: 140px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #37352F;
+  }
+
+  .mini-timer-digits-collapsed {
+    font-size: 13px;
+    font-weight: 600;
+    color: #2383E2;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+  }
+
+  .mini-btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: #787774;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    padding: 0;
+  }
+  .mini-btn-icon:hover {
+    background: #F1F1EF;
+    color: #37352F;
+  }
+
+  /* Expanded Card Mode */
+  .mini-timer-card {
+    width: 280px;
+    background: #FFFFFF;
+    border: 1px solid #E6E6E4;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 12px 14px;
+    animation: fadeInSlideDown 0.2s ease-out;
+  }
+
+  @keyframes fadeInSlideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .mini-timer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #F1F1EF;
+  }
+
+  .mini-timer-digits-expanded {
+    font-size: 32px;
+    font-weight: 700;
+    color: #2383E2;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+    line-height: 1.1;
+    margin: 8px 0;
+  }
+
+  .mini-progress-track {
+    height: 4px;
+    width: 100%;
+    background: #F1F1EF;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .mini-progress-bar {
+    height: 100%;
+    background: #2383E2;
+    transition: width 0.5s ease;
+  }
+
+  /* Fixed Bottom-Right Toast Container */
+  .team-toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1060;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 380px;
+    width: calc(100% - 48px);
+    pointer-events: none;
+  }
+
+  .team-toast-item {
+    pointer-events: auto;
+    background: #FFFFFF;
+    border: 1px solid #E6E6E4;
+    border-left: 4px solid #2383E2;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    padding: 12px 14px;
+    transition: all 0.25s ease;
+    animation: toastSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .team-toast-item.type-note {
+    border-left-color: #F59E0B;
+  }
+
+  @keyframes toastSlideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .team-toast-item:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  }
+
+  .team-toast-btn-action {
+    background: #2383E2;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    padding: 4px 10px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .team-toast-btn-action:hover {
+    background: #1b6fc2;
+    color: #FFFFFF;
+  }
+
+  .team-toast-btn-close {
+    border: 1px solid #D3D3D0;
+    background: #F1F1EF;
+    color: #37352F;
+    border-radius: 4px;
+    font-size: 12px;
+    padding: 4px 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .team-toast-btn-close:hover {
+    background: #E6E6E4;
+  }
+</style>
+
+<!-- ======================================================== -->
+<!-- SCRIPTS: PERSISTENT POMODORO & TEAM ACTIVITY POLLING     -->
+<!-- ======================================================== -->
+<script>
+(function() {
+  // ----------------------------------------------------
+  // A. Persistent Pomodoro Timer Engine
+  // ----------------------------------------------------
+  const STORAGE_KEY = 'pomodoroState';
+  let timerInterval = null;
+  let audioCtx = null;
+
+  function getAudioContext() {
+    if (!audioCtx) {
+      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtxClass) {
+        audioCtx = new AudioCtxClass();
+      }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+
+  // IndexedDB Custom Audio Storage Integration
+  const AUDIO_DB_NAME = 'WebPlannerAudioDB';
+  const AUDIO_STORE_NAME = 'custom_sounds';
+  const AUDIO_DB_VERSION = 1;
+
+  function openAudioDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(AUDIO_DB_NAME, AUDIO_DB_VERSION);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(AUDIO_STORE_NAME)) {
+          db.createObjectStore(AUDIO_STORE_NAME, { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function loadCustomSoundsIntoMiniTimer() {
+    try {
+      const db = await openAudioDB();
+      const tx = db.transaction(AUDIO_STORE_NAME, 'readonly');
+      const store = tx.objectStore(AUDIO_STORE_NAME);
+      const req = store.getAll();
+
+      req.onsuccess = () => {
+        const sounds = req.result || [];
+        const optgroup = document.getElementById('miniTimerCustomGroup');
+        if (optgroup) {
+          optgroup.innerHTML = '';
+          sounds.forEach(sound => {
+            const opt = document.createElement('option');
+            opt.value = `custom_${sound.id}`;
+            opt.textContent = `📁 ${sound.name}`;
+            optgroup.appendChild(opt);
+          });
+        }
+
+        // Restore saved selection
+        const state = loadPomodoroState();
+        let savedSound = (state && state.selectedSound) || localStorage.getItem('webplanner_pomodoro_sound');
+        if (savedSound === 'chime1') savedSound = 'chime';
+        if (savedSound === 'digital') savedSound = 'alarm';
+        const sel = document.getElementById('miniTimerSoundSelect');
+        if (sel && savedSound) {
+          const hasOption = Array.from(sel.options).some(o => o.value === savedSound);
+          if (hasOption) {
+            sel.value = savedSound;
+          }
+        }
+      };
+    } catch (err) {
+      console.warn('Failed to load custom sounds into mini timer:', err);
+    }
+  }
+  window.loadCustomSoundsIntoMiniTimer = loadCustomSoundsIntoMiniTimer;
+
+  // Web Audio API Preset Sounds
+  function playPresetSound(type) {
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      if (type === 'digital' || type === 'alarm') {
+        // Digital Alarm Beep (3 quick beeps)
+        for (let i = 0; i < 3; i++) {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(880, now + i * 0.15);
+          gain.gain.setValueAtTime(0.2, now + i * 0.15);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.1);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + i * 0.15);
+          osc.stop(now + i * 0.15 + 0.1);
+        }
+      } else if (type === 'marimba') {
+        // Marimba Bell (warm wood chord)
+        const freqs = [440, 554.37, 659.25];
+        freqs.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+          gain.gain.setValueAtTime(0.3, now + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.8);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + idx * 0.08);
+          osc.stop(now + idx * 0.08 + 0.8);
+        });
+      } else {
+        // Soft Chime (C5 -> E5 -> G5)
+        const notes = [523.25, 659.25, 783.99];
+        notes.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + i * 0.18);
+          gain.gain.setValueAtTime(0.25, now + i * 0.18);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.18 + 1.2);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + i * 0.18);
+          osc.stop(now + i * 0.18 + 1.2);
+        });
+      }
+    } catch (e) {
+      console.warn('Audio playback error:', e);
+    }
+  }
+
+  async function playCustomAudio(customId) {
+    return new Promise(async (resolve) => {
+      try {
+        const db = await openAudioDB();
+        const tx = db.transaction(AUDIO_STORE_NAME, 'readonly');
+        const req = tx.objectStore(AUDIO_STORE_NAME).get(customId);
+        req.onsuccess = () => {
+          const record = req.result;
+          if (record && record.data) {
+            const blob = new Blob([record.data], { type: record.type || 'audio/mpeg' });
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            audio.onended = () => {
+              URL.revokeObjectURL(url);
+              resolve();
+            };
+            audio.play().catch(e => {
+              console.warn('Custom audio playback failed, fallback to preset chime:', e);
+              playPresetSound('chime');
+              resolve();
+            });
+          } else {
+            playPresetSound('chime');
+            resolve();
+          }
+        };
+        req.onerror = () => {
+          playPresetSound('chime');
+          resolve();
+        };
+      } catch (e) {
+        playPresetSound('chime');
+        resolve();
+      }
+    });
+  }
+
+  async function playPomodoroSound(soundKey) {
+    if (!soundKey) soundKey = 'chime';
+    if (soundKey === 'chime1') soundKey = 'chime';
+    if (soundKey === 'digital') soundKey = 'alarm';
+
+    if (soundKey.startsWith('custom_')) {
+      const id = parseInt(soundKey.replace('custom_', ''), 10);
+      await playCustomAudio(id);
+    } else {
+      playPresetSound(soundKey);
+    }
+  }
+  window.playPomodoroSound = playPomodoroSound;
+
+  window.previewMiniTimerSound = async function() {
+    getAudioContext();
+    const sel = document.getElementById('miniTimerSoundSelect');
+    const sound = sel ? sel.value : 'chime';
+    await playPomodoroSound(sound);
+  };
+
+  // State Management
+  function loadPomodoroState() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return null;
+      return JSON.parse(saved);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function savePomodoroState(state) {
+    try {
+      if (!state) {
+        localStorage.removeItem(STORAGE_KEY);
+      } else {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+      window.dispatchEvent(new CustomEvent('pomodoroTick', {
+        detail: state ? {
+          remainingSeconds: (state.isRunning && state.endTime) ? Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000)) : state.remainingSeconds,
+          isRunning: state.isRunning,
+          state
+        } : null
+      }));
+    } catch (e) {
+      console.warn('Storage save error:', e);
+    }
+  }
+
+  function formatTime(seconds) {
+    const s = Math.max(0, Math.floor(seconds));
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+  }
+
+  function renderTimerUI() {
+    const state = loadPomodoroState();
+    const wrapper = document.getElementById('globalMiniTimer');
+    if (!wrapper) return;
+
+    if (!state || (state.remainingSeconds <= 0 && !state.isRunning)) {
+      wrapper.style.display = 'none';
+      return;
+    }
+
+    wrapper.style.display = 'block';
+
+    // Calculate current seconds
+    let currentSeconds = state.remainingSeconds;
+    if (state.isRunning && state.endTime) {
+      currentSeconds = Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000));
+    }
+
+    const timeStr = formatTime(currentSeconds);
+    const title = state.scheduleTitle || '일반 집중 세션';
+
+    // Titles
+    const tColl = document.getElementById('miniTimerTitleCollapsed');
+    if (tColl) {
+      tColl.textContent = title;
+      tColl.title = title;
+    }
+    const tExp = document.getElementById('miniTimerTitleExpanded');
+    if (tExp) {
+      tExp.textContent = title;
+      tExp.title = title;
+    }
+
+    // Digits
+    const dColl = document.getElementById('miniTimerDigitsCollapsed');
+    if (dColl) dColl.textContent = timeStr;
+    const dExp = document.getElementById('miniTimerDigitsExpanded');
+    if (dExp) dExp.textContent = timeStr;
+
+    // Status Dot
+    const dot = document.getElementById('miniTimerDot');
+    if (dot) {
+      dot.className = 'mini-timer-dot ' + (state.isRunning ? 'running' : 'paused');
+    }
+
+    // Play/Pause Icons
+    const toggleIcon = document.getElementById('miniTimerToggleIcon');
+    if (toggleIcon) {
+      toggleIcon.className = state.isRunning ? 'bi bi-pause-fill' : 'bi bi-play-fill';
+    }
+    const mainIcon = document.getElementById('miniTimerMainIcon');
+    const mainText = document.getElementById('miniTimerMainText');
+    if (mainIcon && mainText) {
+      mainIcon.className = state.isRunning ? 'bi bi-pause-fill me-1' : 'bi bi-play-fill me-1';
+      mainText.textContent = state.isRunning ? '일시정지' : '시작';
+    }
+
+    // Sound selection sync
+    const sel = document.getElementById('miniTimerSoundSelect');
+    if (sel && state.selectedSound) {
+      sel.value = state.selectedSound;
+    }
+
+    // Progress Bar
+    const totalSec = (state.durationMinutes || 25) * 60;
+    const percent = Math.min(100, Math.max(0, Math.round((currentSeconds / totalSec) * 100)));
+    const bar = document.getElementById('miniTimerProgressBar');
+    if (bar) {
+      bar.style.width = percent + '%';
+    }
+
+    // Expanded vs Collapsed view
+    const collEl = document.getElementById('miniTimerCollapsed');
+    const expEl = document.getElementById('miniTimerExpanded');
+    if (collEl && expEl) {
+      if (state.isExpanded) {
+        collEl.style.display = 'none';
+        expEl.style.display = 'block';
+      } else {
+        collEl.style.display = 'flex';
+        expEl.style.display = 'none';
+      }
+    }
+  }
+
+  function tick() {
+    const state = loadPomodoroState();
+    if (!state) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      renderTimerUI();
+      window.dispatchEvent(new CustomEvent('pomodoroTick', { detail: null }));
+      return;
+    }
+
+    if (state.isRunning && state.endTime) {
+      const remaining = Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000));
+      if (remaining <= 0) {
+        // Complete!
+        onTimerComplete();
+        return;
+      }
+      renderTimerUI();
+      window.dispatchEvent(new CustomEvent('pomodoroTick', {
+        detail: { remainingSeconds: remaining, isRunning: true, state }
+      }));
+    } else {
+      renderTimerUI();
+      window.dispatchEvent(new CustomEvent('pomodoroTick', {
+        detail: { remainingSeconds: state.remainingSeconds, isRunning: false, state }
+      }));
+    }
+  }
+
+  function startTimerLoop() {
+    if (!timerInterval) {
+      tick();
+      timerInterval = setInterval(tick, 500);
+    }
+  }
+
+  function onTimerComplete() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+
+    const state = loadPomodoroState();
+    const sound = (state && state.selectedSound) || localStorage.getItem('webplanner_pomodoro_sound') || 'chime';
+    playPomodoroSound(sound);
+
+    const schedId = state ? state.scheduleId : null;
+    const schedTitle = state ? state.scheduleTitle : '일반 집중 세션';
+    const duration = state ? (state.durationMinutes || 25) : 25;
+
+    // Send API fetch
+    if (schedId) {
+      fetch('/schedules/' + schedId + '/focus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minutes: duration })
+      }).catch(err => console.warn('Focus sync error:', err));
+    } else {
+      fetch('/focus/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minutes: duration, title: schedTitle })
+      }).catch(err => console.warn('Focus sync error:', err));
+    }
+
+    // Reset State
+    savePomodoroState(null);
+    renderTimerUI();
+
+    window.dispatchEvent(new CustomEvent('pomodoroCompleted', {
+      detail: { schedId, schedTitle, duration }
+    }));
+
+    // Alert
+    alert('🎉 [' + schedTitle + '] 집중 세션이 완료되었습니다!\n잠시 휴식을 취하세요.');
+  }
+
+  window.pauseGlobalPomodoro = function() {
+    const state = loadPomodoroState();
+    if (!state || !state.isRunning) return;
+    const remaining = Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000));
+    state.isRunning = false;
+    state.remainingSeconds = remaining;
+    state.endTime = null;
+    savePomodoroState(state);
+    renderTimerUI();
+  };
+
+  window.resumeGlobalPomodoro = function() {
+    getAudioContext();
+    const state = loadPomodoroState();
+    if (!state || state.isRunning) return;
+    state.isRunning = true;
+    state.endTime = Date.now() + (state.remainingSeconds * 1000);
+    savePomodoroState(state);
+    renderTimerUI();
+    startTimerLoop();
+  };
+
+  window.resetGlobalPomodoro = function(newMinutes) {
+    if (!newMinutes) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      savePomodoroState(null);
+      renderTimerUI();
+      return;
+    }
+
+    const state = loadPomodoroState();
+    const duration = newMinutes || 25;
+    const title = state ? state.scheduleTitle : '일반 집중 세션';
+    const schedId = state ? state.scheduleId : null;
+    const sound = state ? state.selectedSound : 'chime1';
+
+    const newState = {
+      scheduleId: schedId,
+      scheduleTitle: title,
+      durationMinutes: duration,
+      endTime: Date.now() + (duration * 60 * 1000),
+      remainingSeconds: duration * 60,
+      isRunning: true,
+      isExpanded: false,
+      selectedSound: sound
+    };
+
+    savePomodoroState(newState);
+    renderTimerUI();
+    startTimerLoop();
+  };
+
+  window.getPomodoroState = loadPomodoroState;
+
+  window.toggleMiniTimerPlayPause = function(event) {
+    if (event) event.stopPropagation();
+    getAudioContext();
+
+    const state = loadPomodoroState();
+    if (!state) return;
+
+    if (state.isRunning) {
+      window.pauseGlobalPomodoro();
+    } else {
+      window.resumeGlobalPomodoro();
+    }
+  };
+
+  window.toggleMiniTimerExpand = function(expand) {
+    const state = loadPomodoroState();
+    if (!state) return;
+    state.isExpanded = !!expand;
+    savePomodoroState(state);
+    renderTimerUI();
+  };
+
+  window.resetMiniTimer = function(newMinutes) {
+    window.resetGlobalPomodoro(newMinutes);
+  };
+
+  window.completeMiniTimerManually = function() {
+    if (confirm('현재 집중 세션을 완료 처리하시겠습니까? 누적 시간이 기록됩니다.')) {
+      onTimerComplete();
+    }
+  };
+
+  window.updateMiniTimerSound = function(soundVal) {
+    const state = loadPomodoroState();
+    if (state) {
+      state.selectedSound = soundVal;
+      savePomodoroState(state);
+    }
+    localStorage.setItem('webplanner_pomodoro_sound', soundVal);
+    const sel = document.getElementById('miniTimerSoundSelect');
+    if (sel && sel.value !== soundVal) {
+      sel.value = soundVal;
+    }
+    const dashboardSel = document.getElementById('pomodoroSoundSelect');
+    if (dashboardSel && dashboardSel.value !== soundVal) {
+      dashboardSel.value = soundVal;
+    }
+  };
+
+  // Global Start Trigger (can be invoked from index.ejs or any schedule button)
+  window.startGlobalPomodoro = function(scheduleId, title, minutes) {
+    getAudioContext();
+    const dur = minutes || 25;
+    const existing = loadPomodoroState();
+    const sound = (existing && existing.selectedSound) || localStorage.getItem('webplanner_pomodoro_sound') || 'chime';
+    const state = {
+      scheduleId: scheduleId || null,
+      scheduleTitle: title || '일반 집중 세션',
+      durationMinutes: dur,
+      endTime: Date.now() + (dur * 60 * 1000),
+      remainingSeconds: dur * 60,
+      isRunning: true,
+      isExpanded: false,
+      selectedSound: sound
+    };
+    savePomodoroState(state);
+    renderTimerUI();
+    startTimerLoop();
+  };
+
+  // ----------------------------------------------------
+  // B. Real-time Team Activity Toast Engine (teamschedule.md)
+  // ----------------------------------------------------
+  const TOAST_SEEN_KEY = 'seenTeamUpdates_v1';
+
+  function getSeenUpdateIds() {
+    try {
+      const data = sessionStorage.getItem(TOAST_SEEN_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function addSeenUpdateId(id) {
+    try {
+      const seen = getSeenUpdateIds();
+      if (!seen.includes(id)) {
+        seen.push(id);
+        if (seen.length > 50) seen.shift();
+        sessionStorage.setItem(TOAST_SEEN_KEY, JSON.stringify(seen));
+      }
+    } catch (e) {}
+  }
+
+  function showTeamToast(update) {
+    const container = document.getElementById('teamToastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'team-toast-item ' + (update.type === 'NOTE' ? 'type-note' : 'type-schedule');
+
+    // Header: Badge & Close Button
+    const header = document.createElement('div');
+    header.className = 'd-flex align-items-center justify-content-between mb-1';
+
+    const leftBadge = document.createElement('div');
+    leftBadge.className = 'd-flex align-items-center gap-1';
+    leftBadge.innerHTML = '<span class="badge bg-light text-dark border py-0 px-1" style="font-size: 11px;">' +
+      (update.teamName || '팀') + '</span>' +
+      '<span class="badge ' + (update.type === 'NOTE' ? 'bg-warning-subtle text-dark' : 'bg-primary-subtle text-primary') + ' py-0 px-1" style="font-size: 11px;">' +
+      (update.type === 'NOTE' ? '특이사항' : '새 일정') + '</span>';
+
+    const closeBtnX = document.createElement('button');
+    closeBtnX.type = 'button';
+    closeBtnX.className = 'btn-close';
+    closeBtnX.style.fontSize = '10px';
+    closeBtnX.title = '닫기';
+    closeBtnX.onclick = function() { removeToast(toast); };
+
+    header.appendChild(leftBadge);
+    header.appendChild(closeBtnX);
+
+    // Message Body: Safe textContent
+    const body = document.createElement('div');
+    body.className = 'my-2';
+
+    const authorLine = document.createElement('div');
+    authorLine.className = 'small fw-bold text-dark';
+    const actionDesc = update.type === 'NOTE' ? '님이 새 특이사항을 공유했습니다.' : '님이 새로운 일정을 등록했습니다.';
+    authorLine.textContent = (update.authorName || '팀원') + '(' + (update.authorPosition || '팀원') + ')' + actionDesc;
+
+    const titleLine = document.createElement('div');
+    titleLine.className = 'small text-secondary text-truncate mt-1';
+    titleLine.style.maxWidth = '320px';
+    titleLine.textContent = '• ' + (update.title || '');
+
+    body.appendChild(authorLine);
+    body.appendChild(titleLine);
+
+    // Footer Buttons (2 split buttons)
+    const footer = document.createElement('div');
+    footer.className = 'd-flex align-items-center justify-content-end gap-2 pt-2 border-top';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'team-toast-btn-close';
+    closeBtn.textContent = '닫기';
+    closeBtn.onclick = function() { removeToast(toast); };
+
+    const moveBtn = document.createElement('a');
+    moveBtn.href = '/teams?teamId=' + encodeURIComponent(update.teamId);
+    moveBtn.className = 'team-toast-btn-action';
+    moveBtn.innerHTML = '<i class="bi bi-arrow-right-short"></i> 팀 워크스페이스 이동';
+
+    footer.appendChild(closeBtn);
+    footer.appendChild(moveBtn);
+
+    toast.appendChild(header);
+    toast.appendChild(body);
+    toast.appendChild(footer);
+
+    container.appendChild(toast);
+
+    // 8-second auto dismiss with hover pause
+    let remainingTime = 8000;
+    let dismissTimeout = null;
+    let startTime = Date.now();
+
+    function startDismissTimer() {
+      startTime = Date.now();
+      dismissTimeout = setTimeout(function() {
+        removeToast(toast);
+      }, remainingTime);
+    }
+
+    function pauseDismissTimer() {
+      if (dismissTimeout) {
+        clearTimeout(dismissTimeout);
+        dismissTimeout = null;
+        remainingTime -= (Date.now() - startTime);
+      }
+    }
+
+    toast.addEventListener('mouseenter', pauseDismissTimer);
+    toast.addEventListener('mouseleave', function() {
+      if (remainingTime > 500) {
+        startDismissTimer();
+      } else {
+        removeToast(toast);
+      }
+    });
+
+    startDismissTimer();
+  }
+
+  function removeToast(toastEl) {
+    if (!toastEl || !toastEl.parentNode) return;
+    toastEl.style.opacity = '0';
+    toastEl.style.transform = 'translateY(16px)';
+    setTimeout(function() {
+      if (toastEl.parentNode) {
+        toastEl.parentNode.removeChild(toastEl);
+      }
+    }, 250);
+  }
+
+  function pollTeamUpdates() {
+    fetch('/api/teams/recent-updates')
+      .then(res => {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .then(data => {
+        if (!data || !data.updates || data.updates.length === 0) return;
+        const seen = getSeenUpdateIds();
+
+        // If first visit, record all existing so we only show newly added ones going forward
+        if (!sessionStorage.getItem('toastInitialized')) {
+          sessionStorage.setItem('toastInitialized', 'true');
+          data.updates.forEach(u => addSeenUpdateId(u.type + '_' + u.id));
+          return;
+        }
+
+        // Show newest unseen updates (up to 2 at once)
+        let shownCount = 0;
+        data.updates.forEach(u => {
+          const key = u.type + '_' + u.id;
+          if (!seen.includes(key) && shownCount < 2) {
+            addSeenUpdateId(key);
+            showTeamToast(u);
+            shownCount++;
+          }
+        });
+      })
+      .catch(err => {
+        // silent fail on network glitch
+      });
+  }
+
+  // ----------------------------------------------------
+  // C. Notion-Style Custom Modal Engine (Alert & Confirm)
+  // ----------------------------------------------------
+  let modalResolve = null;
+
+  window.showAlert = function(message, title) {
+    return new Promise(resolve => {
+      const modal = document.getElementById('notionCustomModal');
+      const titleEl = document.getElementById('notionModalTitleText');
+      const iconEl = document.getElementById('notionModalIcon');
+      const msgEl = document.getElementById('notionModalMessage');
+      const cancelBtn = document.getElementById('notionModalCancelBtn');
+      const confirmBtn = document.getElementById('notionModalConfirmBtn');
+
+      if (!modal) {
+        window.alert(message);
+        return resolve(true);
+      }
+
+      titleEl.textContent = title || '알림';
+      iconEl.className = 'bi bi-info-circle-fill text-primary';
+      msgEl.textContent = message;
+      cancelBtn.style.display = 'none';
+      confirmBtn.className = 'notion-dialog-btn confirm';
+      confirmBtn.textContent = '확인';
+
+      modalResolve = () => {
+        modal.classList.remove('active');
+        modalResolve = null;
+        resolve(true);
+      };
+
+      modal.classList.add('active');
+    });
+  };
+
+  window.showConfirm = function(message, title) {
+    return new Promise(resolve => {
+      const modal = document.getElementById('notionCustomModal');
+      const titleEl = document.getElementById('notionModalTitleText');
+      const iconEl = document.getElementById('notionModalIcon');
+      const msgEl = document.getElementById('notionModalMessage');
+      const cancelBtn = document.getElementById('notionModalCancelBtn');
+      const confirmBtn = document.getElementById('notionModalConfirmBtn');
+
+      if (!modal) {
+        return resolve(window.confirm(message));
+      }
+
+      titleEl.textContent = title || '확인';
+      iconEl.className = 'bi bi-exclamation-triangle-fill text-warning';
+      msgEl.textContent = message;
+      cancelBtn.style.display = 'inline-block';
+      confirmBtn.className = 'notion-dialog-btn confirm';
+      confirmBtn.textContent = '확인';
+
+      const handleConfirm = () => {
+        cleanup();
+        resolve(true);
+      };
+
+      const handleCancel = () => {
+        cleanup();
+        resolve(false);
+      };
+
+      function cleanup() {
+        modal.classList.remove('active');
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+        modalResolve = null;
+      }
+
+      confirmBtn.addEventListener('click', handleConfirm);
+      cancelBtn.addEventListener('click', handleCancel);
+
+      modal.classList.add('active');
+    });
+  };
+
+  // Wire Modal Confirm Button default click
+  const defaultConfirmBtn = document.getElementById('notionModalConfirmBtn');
+  if (defaultConfirmBtn) {
+    defaultConfirmBtn.addEventListener('click', () => {
+      if (modalResolve) modalResolve();
+    });
+  }
+
+  // Override window.alert
+  window.alert = function(msg) {
+    showAlert(msg);
+  };
+
+  // Global onsubmit confirm interceptor for native forms
+  document.addEventListener('submit', function(e) {
+    const form = e.target;
+    const onsubmitAttr = form.getAttribute('onsubmit');
+    if (onsubmitAttr && onsubmitAttr.includes('confirm(')) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      // Extract confirm message
+      const match = onsubmitAttr.match(/confirm\((['"])(.*?)\1\)/);
+      const msg = match ? match[2] : '작업을 계속 진행하시겠습니까?';
+
+      showConfirm(msg).then(confirmed => {
+        if (confirmed) {
+          form.removeAttribute('onsubmit');
+          form.submit();
+        }
+      });
+    }
+  }, true);
+
+  // Global click confirm interceptor for elements with onclick confirm
+  document.addEventListener('click', function(e) {
+    const target = e.target.closest('[onclick*="confirm("]');
+    if (target) {
+      const onclickAttr = target.getAttribute('onclick');
+      if (onclickAttr && onclickAttr.includes('confirm(')) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const match = onclickAttr.match(/confirm\((['"])(.*?)\1\)/);
+        const msg = match ? match[2] : '작업을 계속 진행하시겠습니까?';
+        showConfirm(msg).then(confirmed => {
+          if (confirmed) {
+            target.removeAttribute('onclick');
+            target.click();
+          }
+        });
+      }
+    }
+  }, true);
+
+  // ----------------------------------------------------
+  // D. Sidebar Collapse & Expand (Hamburger)
+  // ----------------------------------------------------
+  window.toggleSidebar = function() {
+    const sidebar = document.getElementById('appSidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    if (sidebar && backdrop) {
+      sidebar.classList.toggle('show');
+      backdrop.classList.toggle('show');
+    }
+  };
+
+  window.toggleSidebarCollapse = function() {
+    if (window.innerWidth < 992) {
+      // On mobile, use drawer show/hide
+      toggleSidebar();
+      return;
+    }
+
+    const wrapper = document.querySelector('.app-wrapper');
+    if (!wrapper) return;
+
+    wrapper.classList.toggle('sidebar-collapsed');
+    const isCollapsed = wrapper.classList.contains('sidebar-collapsed');
+    try {
+      localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
+    } catch (e) {}
+  };
+
+  function applySavedSidebarState() {
+    try {
+      if (localStorage.getItem('sidebarCollapsed') === 'true' && window.innerWidth >= 992) {
+        const wrapper = document.querySelector('.app-wrapper');
+        if (wrapper) wrapper.classList.add('sidebar-collapsed');
+      }
+    } catch (e) {}
+  }
+
+  // ----------------------------------------------------
+  // E. Notion-Style Context Menu Engine
+  // ----------------------------------------------------
+  let currentCtxSchedule = null;
+
+  window.openScheduleContextMenu = function(e, schedData) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    currentCtxSchedule = schedData;
+    const menu = document.getElementById('notionContextMenu');
+    if (!menu) return;
+
+    const titleEl = document.getElementById('ctxScheduleTitle');
+    if (titleEl) {
+      titleEl.textContent = schedData.title ? (schedData.title.slice(0, 18) + (schedData.title.length > 18 ? '...' : '')) : '일정 관리';
+    }
+
+    // Position Menu
+    menu.style.display = 'block';
+    const menuWidth = 190;
+    const menuHeight = 220;
+
+    let posX = e.clientX;
+    let posY = e.clientY;
+
+    if (posX + menuWidth > window.innerWidth) {
+      posX = window.innerWidth - menuWidth - 10;
+    }
+    if (posY + menuHeight > window.innerHeight) {
+      posY = window.innerHeight - menuHeight - 10;
+    }
+
+    menu.style.left = posX + 'px';
+    menu.style.top = posY + 'px';
+  };
+
+  function closeContextMenu() {
+    const menu = document.getElementById('notionContextMenu');
+    if (menu) menu.style.display = 'none';
+  }
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#notionContextMenu')) {
+      closeContextMenu();
+    }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeContextMenu();
+    }
+  });
+
+  // Context Menu Actions
+  document.addEventListener('DOMContentLoaded', function() {
+    const editBtn = document.getElementById('ctxActionEdit');
+    if (editBtn) {
+      editBtn.addEventListener('click', function() {
+        closeContextMenu();
+        if (!currentCtxSchedule) return;
+        if (typeof openEditModalForScheduleId === 'function') {
+          openEditModalForScheduleId(currentCtxSchedule.id);
+        } else {
+          const modalEl = document.getElementById('editModal' + currentCtxSchedule.id);
+          if (modalEl && typeof bootstrap !== 'undefined') {
+            const m = new bootstrap.Modal(modalEl);
+            m.show();
+          } else {
+            showAlert('수정 화면을 찾을 수 없습니다.');
+          }
+        }
+      });
+    }
+
+    const shareBtn = document.getElementById('ctxActionShare');
+    if (shareBtn) {
+      shareBtn.addEventListener('click', function() {
+        closeContextMenu();
+        if (!currentCtxSchedule) return;
+        openQuickShareModal(currentCtxSchedule.id, currentCtxSchedule.title);
+      });
+    }
+
+    // Status Change in Context Menu (stastics.md 3번: 비동기 fetch 요청 및 캘린더 뷰 유지)
+    ['TODO', 'IN_PROGRESS', 'DONE'].forEach(st => {
+      const btn = document.getElementById('ctxStatus' + (st === 'IN_PROGRESS' ? 'InProgress' : (st === 'TODO' ? 'Todo' : 'Done')));
+      if (btn) {
+        btn.addEventListener('click', function() {
+          closeContextMenu();
+          if (!currentCtxSchedule) return;
+          const scheduleId = currentCtxSchedule.id;
+
+          fetch('/schedules/' + scheduleId + '/status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({ status: st })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.success) {
+              currentCtxSchedule.status = st;
+
+              // 1. userSchedules 전역 데이터 갱신
+              if (typeof userSchedules !== 'undefined') {
+                const target = userSchedules.find(x => String(x.id) === String(scheduleId));
+                if (target) target.status = st;
+              }
+
+              // 2. 캘린더 칩 실시간 갱신 (캘린더 탭 유지!)
+              if (typeof renderCalendar === 'function') {
+                renderCalendar();
+              }
+
+              // 3. 칸반 보드 백그라운드 동기화
+              if (typeof syncScheduleStatusInKanban === 'function') {
+                syncScheduleStatusInKanban(scheduleId, st);
+              }
+
+              // 4. 생산성 통계 도넛 차트 즉시 갱신 (stastics.md 1번)
+              if (typeof refreshProductivityStats === 'function') {
+                refreshProductivityStats(data.stats);
+              }
+            } else {
+              if (typeof showAlert === 'function') {
+                showAlert((data && data.error) || '상태 변경에 실패했습니다.');
+              } else {
+                alert((data && data.error) || '상태 변경에 실패했습니다.');
+              }
+            }
+          })
+          .catch(err => {
+            console.error('Context menu status update error:', err);
+            if (typeof showAlert === 'function') {
+              showAlert('상태 변경 중 통신 오류가 발생했습니다.');
+            }
+          });
+        });
+      }
+    });
+
+    const delBtn = document.getElementById('ctxActionDelete');
+    if (delBtn) {
+      delBtn.addEventListener('click', function() {
+        closeContextMenu();
+        if (!currentCtxSchedule) return;
+        showConfirm('정말로 이 일정을 삭제하시겠습니까?', '일정 삭제').then(ok => {
+          if (ok) {
+            const f = document.createElement('form');
+            f.method = 'POST';
+            f.action = '/schedules/' + currentCtxSchedule.id + '/delete';
+            document.body.appendChild(f);
+            f.submit();
+          }
+        });
+      });
+    }
+  });
+
+  window.openQuickShareModal = function(scheduleId, scheduleTitle) {
+    const form = document.getElementById('quickShareTeamForm');
+    const select = document.getElementById('quickShareTeamSelect');
+    if (!form || !select) return;
+
+    form.action = '/schedules/' + scheduleId + '/share-to-team';
+
+    // Populate user's teams from global or DOM
+    select.innerHTML = '<option value="">소속 팀을 선택하세요</option>';
+    const teamOptions = document.querySelectorAll('select[name="target_workspace"] optgroup option');
+    if (teamOptions.length > 0) {
+      teamOptions.forEach(opt => {
+        const teamId = opt.value.replace('team_', '');
+        const optEl = document.createElement('option');
+        optEl.value = teamId;
+        optEl.textContent = opt.textContent;
+        select.appendChild(optEl);
+      });
+    } else {
+      // Fallback: check if myTeams in window
+      if (window.USER_TEAMS && window.USER_TEAMS.length > 0) {
+        window.USER_TEAMS.forEach(t => {
+          const optEl = document.createElement('option');
+          optEl.value = t.id;
+          optEl.textContent = '[팀] ' + t.name;
+          select.appendChild(optEl);
+        });
+      }
+    }
+
+    const modalEl = document.getElementById('quickShareTeamModal');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+      const m = new bootstrap.Modal(modalEl);
+      m.show();
+    }
+  };
+
+  // ----------------------------------------------------
+  // Initialization on DOM Ready
+  // ----------------------------------------------------
+  document.addEventListener('DOMContentLoaded', function() {
+    applySavedSidebarState();
+
+    // 0. Load Custom Sounds into Mini Timer
+    loadCustomSoundsIntoMiniTimer();
+
+    // 1. Init Pomodoro
+    const state = loadPomodoroState();
+    if (state) {
+      if (state.isRunning && state.endTime) {
+        const remaining = Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000));
+        if (remaining <= 0) {
+          onTimerComplete();
+        } else {
+          renderTimerUI();
+          startTimerLoop();
+        }
+      } else {
+        renderTimerUI();
+      }
+    }
+
+    // 2. Init Team Updates Polling (Every 6 seconds)
+    pollTeamUpdates();
+    setInterval(pollTeamUpdates, 6000);
+  });
+})();
+</script>

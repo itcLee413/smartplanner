@@ -1,0 +1,22 @@
+{
+  "name": "webplanner",
+  "version": "1.0.0",
+  "description": "AI-powered All-in-One Productivity & Schedule Management Web Application with Telegram Assistant",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "@google/genai": "^0.14.0",
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "helmet": "^8.0.0",
+    "multer": "^2.5.0",
+    "node-cron": "^3.0.3"
+  }
+}
