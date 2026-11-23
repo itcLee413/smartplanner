@@ -1,0 +1,26 @@
+<div class="header-realtime-clock d-flex align-items-center text-secondary small px-2 py-1 rounded bg-light border shadow-xs" style="font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.82rem; white-space: nowrap;" title="접속자 시스템 시계 (24시간)">
+  <i class="bi bi-clock me-1 text-primary"></i>
+  <span class="globalHeaderClockText"></span>
+</div>
+<script>
+  (function() {
+    function updateHeaderRealtimeClock() {
+      const els = document.querySelectorAll('.globalHeaderClockText');
+      if (!els || els.length === 0) return;
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+      const timeStr = `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+      els.forEach(el => { el.textContent = timeStr; });
+    }
+    updateHeaderRealtimeClock();
+    if (!window._headerClockTimerStarted) {
+      window._headerClockTimerStarted = true;
+      setInterval(updateHeaderRealtimeClock, 1000);
+    }
+  })();
+</script>

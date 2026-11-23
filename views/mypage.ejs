@@ -96,10 +96,10 @@
           </span>
         </div>
         <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-light text-dark border px-2 py-1 fw-normal">
-            <i class="bi bi-person-fill text-primary me-1"></i>
-            <strong><%= user.name %></strong> (<%= user.username %>)
-          </span>
+          <div id="headerMiniTimerSlot" class="d-flex align-items-center"></div>
+          <%- include('partials/notification-dropdown') %>
+          <!-- Realtime 24h Clock (third.md 1번) -->
+          <%- include('partials/header-clock') %>
         </div>
       </header>
 
@@ -288,7 +288,7 @@
                   { id: 'stats', title: '생산성 통계 차트', desc: '카테고리별 일정 분포 도넛 차트 및 총 일정/완료율 요약', badge: '기본 권장 (4x4)', icon: 'bi-pie-chart-fill text-info' },
                   { id: 'quick_add', title: '새 일정 빠른 등록 폼', desc: '개인 또는 팀 워크스페이스에 즉시 일정을 추가하는 간편 폼', badge: '기본 권장 (4x3)', icon: 'bi-plus-circle-fill text-success' },
                   { id: 'clock', title: '실시간 디지털 시계 & 날짜', desc: '초 단위 실시간 시계와 오늘의 날짜, 25분 집중 바로 시작 퀵 버튼', badge: '신규 위젯 (4x2)', icon: 'bi-clock-fill text-danger' },
-                  { id: 'memo', title: '빠른 포스트잇 메모장', desc: '노션 스타일의 깔끔한 빠른 메모장 (타이핑 시 1초 자동 저장)', badge: '신규 위젯 (4x3)', icon: 'bi-sticky-fill text-warning' }
+                  { id: 'memo', title: '빠른 포스트잇 메모장', desc: '노션 스타일의 깔끔한 빠른 메모장 (타이핑 시 1초 자동 저장)', badge: '신규 위젯 (8x3)', icon: 'bi-sticky-fill text-warning' }
                 ];
               %>
 
@@ -367,7 +367,7 @@
                 <div class="row g-3" id="customWidgetsGrid">
                   <% customWidgets.forEach(cw => { 
                        const customConf = (typeof dashboardLayout !== 'undefined' && dashboardLayout) ? dashboardLayout.find(item => item.id === 'custom_' + cw.id) : null;
-                       const isChecked = customConf ? customConf.enabled : true;
+                       const isChecked = (customConf && customConf.enabled !== undefined) ? (customConf.enabled !== false && customConf.enabled !== 0 && customConf.enabled !== 'false') : true;
                   %>
                     <div class="col-md-6" id="cw-card-col-<%= cw.id %>">
                       <div class="p-3 border rounded-3 bg-light bg-opacity-50 h-100 d-flex flex-column justify-content-between">
@@ -378,7 +378,7 @@
                               <span class="text-truncate" title="<%= cw.title %>"><%= cw.title %></span>
                             </div>
                             <div class="form-check form-switch m-0" title="대시보드 표시 여부">
-                              <input class="form-check-input cursor-pointer" type="checkbox" role="switch" id="cw_toggle_<%= cw.id %>" <%= isChecked ? 'checked' : '' %> onchange="toggleCustomWidgetDisplay('<%= cw.id %>', this.checked)">
+                              <input class="form-check-input cursor-pointer widget-config-toggle" type="checkbox" role="switch" id="cw_toggle_<%= cw.id %>" data-widget-id="custom_<%= cw.id %>" <%= isChecked ? 'checked' : '' %> onchange="toggleCustomWidgetDisplay('<%= cw.id %>', this.checked)">
                             </div>
                           </div>
                           <p class="small text-muted mb-2 text-truncate-2" style="min-height: 2.4em;"><%= cw.description || '별도의 설명이 등록되지 않은 커스텀 위젯입니다.' %></p>
@@ -750,15 +750,15 @@ window.parent.postMessage({ type: 'REQUEST_WS_CONTEXT' }, '*');`
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
   <style>
-\${commonCss}
-\${cssCode || ''}
+${commonCss}
+${cssCode || ''}
   </style>
 </head>
 <body>
-\${htmlCode || ''}
+${htmlCode || ''}
 <script>
   try {
-\${jsCode || ''}
+${jsCode || ''}
   } catch (err) {
     console.error("Custom widget script error:", err);
   }
@@ -770,8 +770,8 @@ window.parent.postMessage({ type: 'REQUEST_WS_CONTEXT' }, '*');`
     function switchEditorTab(tab) {
       activeEditorTab = tab;
       ['html', 'css', 'js'].forEach(t => {
-        const btn = document.getElementById(`tab-\${t}-btn`);
-        const pane = document.getElementById(`pane-\${t}`);
+        const btn = document.getElementById(`tab-${t}-btn`);
+        const pane = document.getElementById(`pane-${t}`);
         if (btn) btn.classList.toggle('active', t === tab);
         if (pane) pane.classList.toggle('active', t === tab);
       });
@@ -939,7 +939,7 @@ window.parent.postMessage({ type: 'REQUEST_WS_CONTEXT' }, '*');`
       btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>저장 중...';
 
       try {
-        const url = editingWidgetId ? `/api/custom-widgets/\${editingWidgetId}/update` : '/api/custom-widgets';
+        const url = editingWidgetId ? `/api/custom-widgets/${editingWidgetId}/update` : '/api/custom-widgets';
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -966,7 +966,7 @@ window.parent.postMessage({ type: 'REQUEST_WS_CONTEXT' }, '*');`
       }
 
       try {
-        const res = await fetch(`/api/custom-widgets/\${widgetId}/delete`, {
+        const res = await fetch(`/api/custom-widgets/${widgetId}/delete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
@@ -984,7 +984,7 @@ window.parent.postMessage({ type: 'REQUEST_WS_CONTEXT' }, '*');`
 
     async function exportCustomWidget(widgetId) {
       try {
-        const res = await fetch(`/api/custom-widgets/\${widgetId}/export`);
+        const res = await fetch(`/api/custom-widgets/${widgetId}/export`);
         if (!res.ok) throw new Error('Export API error');
         const exportData = await res.json();
         const jsonString = JSON.stringify(exportData, null, 2);
@@ -1077,11 +1077,15 @@ window.parent.postMessage({ type: 'REQUEST_WS_CONTEXT' }, '*');`
       }
 
       try {
-        await fetch(`/api/custom-widgets/\${widgetId}/toggle`, {
+        const res = await fetch(`/api/custom-widgets/${widgetId}/toggle`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ enabled })
         });
+        const data = await res.json();
+        if (!data || !data.success) {
+          console.error('Failed to toggle custom widget display:', data && data.message);
+        }
       } catch (err) {
         console.error('Failed to toggle custom widget display:', err);
       }

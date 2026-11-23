@@ -1,0 +1,252 @@
+<!-- Notification Bell & Dropdown Partial (second.md 3번) -->
+<div class="dropdown me-1" id="globalNotificationWrapper">
+  <button class="btn btn-sm btn-outline-secondary position-relative d-flex align-items-center justify-content-center p-1" 
+          type="button" 
+          id="globalNotifBellBtn" 
+          data-bs-toggle="dropdown" 
+          data-bs-auto-close="outside" 
+          aria-expanded="false" 
+          title="실시간 알림 및 팀 초대">
+    <i class="bi bi-bell fs-6"></i>
+    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill" 
+          id="globalNotifRedBadge" 
+          style="background-color: #E03E3E !important; color: #FFFFFF !important; font-size: 0.65rem; <%= (typeof totalBadgeCount !== 'undefined' && totalBadgeCount > 0) ? '' : 'display: none;' %>">
+      <%= typeof totalBadgeCount !== 'undefined' ? totalBadgeCount : 0 %>
+    </span>
+  </button>
+
+  <div class="dropdown-menu dropdown-menu-end shadow-lg border p-0" 
+       id="globalNotifDropdownMenu" 
+       style="width: 360px; max-width: calc(100vw - 30px); border-radius: 12px; overflow: hidden; z-index: 1060;">
+    
+    <!-- Dropdown Header -->
+    <div class="p-3 bg-light border-bottom">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="fw-bold fs-6 text-dark">
+          <i class="bi bi-bell-fill text-primary me-1"></i>알림함
+        </span>
+        <span class="badge bg-white text-secondary border smaller" id="notifBadgeSummary">
+          미확인 <%= typeof totalBadgeCount !== 'undefined' ? totalBadgeCount : 0 %>건
+        </span>
+      </div>
+
+      <!-- 2 Tabs: [팀 일정 알림] & [팀 참여 요청] -->
+      <ul class="nav nav-pills nav-fill nav-pills-sm bg-white p-1 rounded-2 border" id="notifTabPills" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active py-1 px-2 small fw-semibold" 
+                  id="tab-notif-schedules-btn" 
+                  data-bs-toggle="pill" 
+                  data-bs-target="#notif-tab-schedules" 
+                  type="button" 
+                  role="tab">
+            <i class="bi bi-calendar-event me-1"></i>팀 일정 알림
+            <% if (typeof unreadNotifCount !== 'undefined' && unreadNotifCount > 0) { %>
+              <span class="badge bg-danger rounded-pill smaller ms-1" id="tabNotifCountBadge"><%= unreadNotifCount %></span>
+            <% } %>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link py-1 px-2 small fw-semibold" 
+                  id="tab-notif-invites-btn" 
+                  data-bs-toggle="pill" 
+                  data-bs-target="#notif-tab-invites" 
+                  type="button" 
+                  role="tab">
+            <i class="bi bi-envelope-open me-1"></i>팀 참여 요청
+            <% if (typeof pendingInviteCount !== 'undefined' && pendingInviteCount > 0) { %>
+              <span class="badge bg-danger rounded-pill smaller ms-1" id="tabInviteCountBadge"><%= pendingInviteCount %></span>
+            <% } %>
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Dropdown Body Tab Content -->
+    <div class="tab-content" id="notifTabContent" style="max-height: 380px; overflow-y: auto;">
+      
+      <!-- 1) [팀 일정 알림] 탭 -->
+      <div class="tab-pane fade show active" id="notif-tab-schedules" role="tabpanel">
+        <div class="d-flex align-items-center justify-content-between px-3 py-2 bg-light-subtle border-bottom">
+          <span class="smaller text-muted">최근 팀 일정 알림</span>
+          <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none smaller fw-semibold text-primary" onclick="markAllNotificationsRead()">
+            <i class="bi bi-check-all me-1"></i>모두 읽음 처리
+          </button>
+        </div>
+
+        <div class="list-group list-group-flush" id="notifScheduleListGroup">
+          <% if (typeof userNotifications === 'undefined' || userNotifications.length === 0) { %>
+            <div class="text-center py-4 text-muted small" id="notifEmptyState">
+              <i class="bi bi-bell-slash fs-3 opacity-50 d-block mb-1"></i>
+              새로운 알림 내역이 없습니다.
+            </div>
+          <% } else { %>
+            <% userNotifications.forEach(n => { %>
+              <a href="<%= n.link_url || '#' %>" 
+                 class="list-group-item list-group-item-action p-3 d-flex align-items-start gap-2 notif-item <%= n.is_read ? 'text-secondary bg-white' : 'bg-primary-subtle bg-opacity-10 fw-semibold text-dark' %>"
+                 style="font-size: 0.85rem;"
+                 data-notif-id="<%= n.id %>">
+                <i class="bi <%= n.type === 'TEAM_INVITE' ? 'bi-envelope-check text-info' : 'bi-calendar-check text-primary' %> fs-5 mt-1"></i>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="mb-1 text-break"><%= n.message %></div>
+                  <div class="smaller text-muted"><%= n.created_at ? n.created_at.slice(0, 16) : '' %></div>
+                </div>
+                <% if (!n.is_read) { %>
+                  <span class="badge bg-primary p-1 rounded-circle mt-1 unread-dot" title="읽지 않음" style="width: 8px; height: 8px;"></span>
+                <% } %>
+              </a>
+            <% }) %>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- 2) [팀 참여 요청] 탭 -->
+      <div class="tab-pane fade" id="notif-tab-invites" role="tabpanel">
+        <div class="p-2" id="notifInvitesListContainer">
+          <% if (typeof userInvitations === 'undefined' || userInvitations.length === 0) { %>
+            <div class="text-center py-4 text-muted small" id="invitesEmptyState">
+              <i class="bi bi-envelope-paper fs-3 opacity-50 d-block mb-1"></i>
+              대기 중인 팀 참여 요청이 없습니다.
+            </div>
+          <% } else { %>
+            <div class="d-flex flex-column gap-2" id="invitesCardsGroup">
+              <% userInvitations.forEach(inv => { %>
+                <div class="card border rounded-3 p-3 bg-white invite-card" id="inviteCard<%= inv.id %>" style="box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="avatar-sm bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
+                      <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <div class="fw-bold text-dark text-truncate" style="font-size: 0.9rem;"><%= inv.team_name %></div>
+                      <div class="smaller text-muted">초대자: <%= inv.inviter_name %> (@<%= inv.inviter_username %>)</div>
+                    </div>
+                  </div>
+                  <p class="smaller text-secondary mb-3">
+                    팀원으로 참여하여 일정을 함께 공유하고 협업하시겠습니까?
+                  </p>
+                  <div class="d-flex align-items-center justify-content-end gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-3" onclick="respondInvitation('<%= inv.id %>', 'DECLINE')">
+                      거절
+                    </button>
+                    <button type="button" class="btn btn-sm btn-success py-1 px-3 fw-semibold text-white" onclick="respondInvitation('<%= inv.id %>', 'ACCEPT')">
+                      <i class="bi bi-check2 me-1"></i>수락
+                    </button>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // Global Notification & Invitation Handlers
+  async function markAllNotificationsRead() {
+    try {
+      const res = await fetch('/api/notifications/read-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (data && data.success) {
+        document.querySelectorAll('.notif-item').forEach(el => {
+          el.classList.remove('bg-primary-subtle', 'bg-opacity-10', 'fw-semibold', 'text-dark');
+          el.classList.add('bg-white', 'text-secondary');
+        });
+        document.querySelectorAll('.unread-dot').forEach(el => el.remove());
+        const countBadge = document.getElementById('tabNotifCountBadge');
+        if (countBadge) countBadge.remove();
+
+        // Update overall badge
+        refreshGlobalBadgeAfterAction();
+      }
+    } catch (e) {
+      console.error('Failed to mark all read:', e);
+    }
+  }
+  window.markAllNotificationsRead = markAllNotificationsRead;
+
+  async function respondInvitation(invId, action) {
+    try {
+      const res = await fetch(`/api/invitations/${invId}/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+      });
+      const data = await res.json();
+      if (data && data.success) {
+        const card = document.getElementById(`inviteCard${invId}`);
+        if (card) {
+          card.classList.add('fade');
+          setTimeout(() => {
+            card.remove();
+            const group = document.getElementById('invitesCardsGroup');
+            if (group && group.children.length === 0) {
+              const cont = document.getElementById('notifInvitesListContainer');
+              if (cont) {
+                cont.innerHTML = `
+                  <div class="text-center py-4 text-muted small" id="invitesEmptyState">
+                    <i class="bi bi-envelope-paper fs-3 opacity-50 d-block mb-1"></i>
+                    대기 중인 팀 참여 요청이 없습니다.
+                  </div>
+                `;
+              }
+            }
+          }, 200);
+        }
+
+        const inviteBadge = document.getElementById('tabInviteCountBadge');
+        if (inviteBadge) {
+          let cur = parseInt(inviteBadge.textContent.trim(), 10) || 1;
+          cur--;
+          if (cur <= 0) inviteBadge.remove();
+          else inviteBadge.textContent = cur;
+        }
+
+        refreshGlobalBadgeAfterAction();
+
+        if (typeof showAlert === 'function') {
+          showAlert(data.message);
+        } else {
+          alert(data.message);
+        }
+
+        if (action === 'ACCEPT' && data.teamId) {
+          setTimeout(() => {
+            window.location.href = `/teams?teamId=${data.teamId}`;
+          }, 800);
+        }
+      } else {
+        if (typeof showAlert === 'function') showAlert((data && data.error) || '초대 처리 실패');
+        else alert((data && data.error) || '초대 처리 실패');
+      }
+    } catch (e) {
+      console.error('Respond invite error:', e);
+    }
+  }
+  window.respondInvitation = respondInvitation;
+
+  function refreshGlobalBadgeAfterAction() {
+    const unreadDots = document.querySelectorAll('.unread-dot').length;
+    const inviteCards = document.querySelectorAll('.invite-card').length;
+    const total = unreadDots + inviteCards;
+
+    const redBadge = document.getElementById('globalNotifRedBadge');
+    if (redBadge) {
+      if (total > 0) {
+        redBadge.textContent = total;
+        redBadge.style.display = '';
+      } else {
+        redBadge.style.display = 'none';
+      }
+    }
+
+    const summary = document.getElementById('notifBadgeSummary');
+    if (summary) {
+      summary.textContent = `미확인 ${total}건`;
+    }
+  }
+</script>

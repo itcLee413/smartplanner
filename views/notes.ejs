@@ -96,10 +96,10 @@
           </span>
         </div>
         <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-light text-dark border px-2 py-1 fw-normal">
-            <i class="bi bi-person-fill text-primary me-1"></i>
-            <strong><%= user.name %></strong> (<%= user.username %>)
-          </span>
+          <div id="headerMiniTimerSlot" class="d-flex align-items-center"></div>
+          <%- include('partials/notification-dropdown') %>
+          <!-- Realtime 24h Clock (third.md 1번) -->
+          <%- include('partials/header-clock') %>
         </div>
       </header>
 

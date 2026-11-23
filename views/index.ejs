@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WorkSmarter - 올인원 생산성 & 텔레그램 스마트 비서</title>
+  <title>WorkSmarter - 스마트 일정 및 워크스페이스 관리</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/style.css">
@@ -99,16 +99,59 @@
           </span>
         </div>
         <div class="d-flex align-items-center gap-2">
+          <!-- Mini Timer slot placed to the left of edit mode button -->
+          <div id="headerMiniTimerSlot" class="d-flex align-items-center"></div>
+
+          <!-- Notification Bell & Dropdown (second.md 3번) -->
+          <%- include('partials/notification-dropdown') %>
+
+          <!-- Edit Mode Actions (Visible only in edit mode) -->
+          <div id="editModeControlsGroup" class="d-none align-items-center gap-1">
+            <button type="button" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" onclick="compactDashboardHorizontal()" title="위젯 사이의 좌우 빈 공간을 제거하고 왼쪽으로 밀착시킵니다">
+              <i class="bi bi-distribute-horizontal"></i>
+              <span class="d-none d-md-inline">좌우 빈틈 밀착</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1" onclick="fillDashboardRowWidths()" title="각 행의 모듈 너비를 12열 그리드에 맞춰 빈틈없이 꽉 채웁니다">
+              <i class="bi bi-arrows-expand"></i>
+              <span class="d-none d-md-inline">12열 꽉 채우기</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" onclick="resetDashboardPreset()" title="기본 프리셋 비율로 초기화">
+              <i class="bi bi-arrow-counterclockwise"></i>
+              <span class="d-none d-md-inline">기본 정렬</span>
+            </button>
+          </div>
+
+          <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" id="btnToggleGridSpacing" onclick="toggleGridSpacing()" title="모듈 사이 간격 전환 (경계선 밀착 0px ↔ 카드 분리 8px)">
+            <i class="bi bi-border-outer" id="gridSpacingIcon"></i>
+            <span id="gridSpacingText" class="d-none d-md-inline">간격: 밀착(0px)</span>
+          </button>
+
           <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" id="btnToggleEditMode" onclick="toggleDashboardEditMode()" title="대시보드 위젯 위치 및 크기 조절">
             <i class="bi bi-pencil-square"></i>
             <span id="editModeBtnText">레이아웃 편집 모드</span>
           </button>
-          <span class="badge bg-light text-dark border px-2 py-1 fw-normal">
-            <i class="bi bi-person-fill text-primary me-1"></i>
-            <strong><%= user.name %></strong> (<%= user.username %>)
-          </span>
+          <!-- Realtime 24h Clock (third.md 1번) -->
+          <%- include('partials/header-clock') %>
         </div>
       </header>
+
+      <!-- Guest Mode Banner (third.md 2번) -->
+      <% if (locals.isGuest) { %>
+      <div class="container-fluid px-4 mt-3" id="guestModeNoticeContainer">
+        <div class="alert alert-warning py-2 px-3 mb-0 d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-sm rounded-3 border-warning-subtle">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-person-badge-fill me-1"></i>게스트 모드</span>
+            <strong class="text-dark">게스트 모드 (브라우저 임시 저장 중)</strong>
+            <span class="text-secondary small d-none d-md-inline">- 등록한 일정·할 일·메모·위젯 배치는 접속자의 브라우저 localStorage에 안전하게 보관됩니다.</span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <a href="/login" class="btn btn-sm btn-primary fw-semibold d-flex align-items-center gap-1 shadow-sm">
+              <i class="bi bi-box-arrow-in-right"></i> 로그인 / 회원가입으로 전환
+            </a>
+          </div>
+        </div>
+      </div>
+      <% } %>
 
       <!-- Global Toast / Alerts -->
       <div class="container-fluid px-4 mt-3">
@@ -130,7 +173,7 @@
       </div>
 
       <!-- Main Container -->
-      <main class="container-fluid px-4 py-2 flex-grow-1">
+      <main class="container-fluid px-3 px-lg-4 py-2 flex-grow-1">
 
     <% 
       const layoutMap = {};
@@ -142,7 +185,7 @@
       const statsConf = layoutMap['stats'] || { id: 'stats', x: 8, y: 3, w: 4, h: 4, enabled: true };
       const quickAddConf = layoutMap['quick_add'] || { id: 'quick_add', x: 8, y: 7, w: 4, h: 3, enabled: true };
       const clockConf = layoutMap['clock'] || { id: 'clock', x: 0, y: 10, w: 4, h: 2, enabled: false };
-      const memoConf = layoutMap['memo'] || { id: 'memo', x: 4, y: 10, w: 4, h: 3, enabled: false };
+      const memoConf = layoutMap['memo'] || { id: 'memo', x: 4, y: 10, w: 8, h: 3, enabled: false };
       const curTop3 = (typeof top3List !== 'undefined' ? top3List : (typeof top3Schedules !== 'undefined' ? top3Schedules : []));
     %>
 
@@ -302,6 +345,7 @@
             <% } %>
           </div>
         </div>
+      </div>
       </div>
       <% } %>
 
@@ -868,6 +912,76 @@
                     </div>
                   </div>
 
+                  <!-- Column 4: EXPIRED (만료) (first.md 4번) -->
+                  <div class="kanban-col kanban-column" data-status="EXPIRED">
+                    <div class="kanban-col-header text-danger">
+                      <span><i class="bi bi-exclamation-triangle-fill me-1"></i> 만료 (EXPIRED)</span>
+                      <span class="badge bg-danger rounded-pill"><%= schedules.filter(s => s.status === 'EXPIRED').length %></span>
+                    </div>
+                    <div class="kanban-cards">
+                      <% schedules.filter(s => s.status === 'EXPIRED').forEach(s => { %>
+                        <div class="kanban-card border-danger border-opacity-50" 
+                             draggable="true" 
+                             data-drag-source="WORKSPACE" 
+                             data-drag-type="PERSONAL" 
+                             data-drag-id="<%= s.id %>" 
+                             data-current-status="<%= s.status %>"
+                             oncontextmenu="openScheduleContextMenu(event, { id: '<%= s.id %>', title: '<%= s.title.replace(/'/g, "\\'") %>', status: '<%= s.status %>' })">
+                          <div class="d-flex align-items-center justify-content-between mb-1">
+                            <div class="d-flex align-items-center gap-2">
+                              <input type="checkbox" class="form-check-input schedule-select-checkbox m-0" value="<%= s.id %>" onchange="onScheduleCheckboxChange()">
+                              <span class="badge badge-cat-<%= s.category %> border"><%= s.category %></span>
+                              <span class="badge bg-danger text-white smaller">기한 만료</span>
+                            </div>
+                            <div class="dropdown">
+                              <button class="btn btn-link btn-sm text-muted p-0" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots-vertical"></i>
+                              </button>
+                              <ul class="dropdown-menu dropdown-menu-end shadow-sm small">
+                                <li>
+                                  <button class="dropdown-item" type="button" onclick="openEditModal('<%= s.id %>', '<%= s.title.replace(/'/g, "\\'") %>', '<%= (s.description || '').replace(/'/g, "\\'").replace(/\n/g, '\\n') %>', '<%= s.due_datetime || '' %>', '<%= s.category %>', '<%= s.is_top3 %>', '<%= s.is_important %>', '<%= s.status %>')">
+                                    <i class="bi bi-pencil me-2 text-primary"></i>일정 수정 및 기한 연장
+                                  </button>
+                                </li>
+                                <li>
+                                  <form action="/schedules/<%= s.id %>/delete" method="POST" class="m-0" onsubmit="return confirm('이 일정을 삭제하시겠습니까?');">
+                                    <button class="dropdown-item text-danger" type="submit">
+                                      <i class="bi bi-trash me-2"></i>삭제
+                                    </button>
+                                  </form>
+                                </li>
+                              </ul>
+                            </div>
+                          </div>
+
+                          <h6 class="fw-bold mb-1 text-danger text-truncate" title="<%= s.title %>"><%= s.title %></h6>
+                          <div class="small text-danger mb-2">
+                            <i class="bi bi-exclamation-circle me-1"></i>마감: <%= s.due_datetime %>
+                          </div>
+
+                          <% if (s.description) { %>
+                            <p class="small text-muted mb-2 text-truncate-2"><%= s.description %></p>
+                          <% } %>
+
+                          <div class="d-flex gap-1 mt-2">
+                            <form action="/schedules/<%= s.id %>/status" method="POST" class="m-0 flex-grow-1">
+                              <input type="hidden" name="status" value="TODO">
+                              <button type="submit" class="btn btn-outline-secondary btn-sm w-100 py-0" style="font-size: 0.75rem;">
+                                <i class="bi bi-arrow-counterclockwise"></i> TODO 복귀
+                              </button>
+                            </form>
+                            <form action="/schedules/<%= s.id %>/status" method="POST" class="m-0">
+                              <input type="hidden" name="status" value="DONE">
+                              <button type="submit" class="btn btn-outline-success btn-sm py-0" style="font-size: 0.75rem;" title="완료 처리">
+                                <i class="bi bi-check-lg"></i>
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      <% }) %>
+                    </div>
+                  </div>
+
                 </div>
               </div>
 
@@ -904,7 +1018,14 @@
                       <% } else { %>
                         <div class="d-flex flex-column gap-2" id="undatedSchedulesList">
                           <% undatedSchedules.forEach(s => { %>
-                            <div class="d-flex align-items-center justify-content-between p-2 rounded border bg-light flex-wrap gap-2" id="undatedScheduleItem<%= s.id %>">
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded border bg-light flex-wrap gap-2 undated-item" 
+                                 id="undatedScheduleItem<%= s.id %>"
+                                 draggable="true"
+                                 data-drag-id="<%= s.id %>"
+                                 data-drag-source="UNDATED"
+                                 data-drag-title="<%= s.title.replace(/"/g, '&quot;') %>"
+                                 data-current-status="<%= s.status %>"
+                                 style="cursor: grab;">
                               <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
                                 <span class="badge badge-cat-<%= s.category %> border"><%= s.category %></span>
                                 <span class="badge bg-secondary text-white smaller">상시 일정</span>
@@ -966,6 +1087,7 @@
                       <span class="badge cal-status-TODO border px-2 py-1" style="font-size: 0.72rem;">할 일</span>
                       <span class="badge cal-status-IN_PROGRESS border px-2 py-1" style="font-size: 0.72rem;">진행 중</span>
                       <span class="badge cal-status-DONE border px-2 py-1" style="font-size: 0.72rem;">완료</span>
+                      <span class="badge cal-status-EXPIRED border px-2 py-1" style="font-size: 0.72rem;">만료</span>
                     </div>
                   </div>
 
@@ -1277,7 +1399,8 @@
       <% if (typeof customWidgets !== 'undefined' && Array.isArray(customWidgets)) { %>
         <% customWidgets.forEach(cw => { 
              const customConf = layoutMap['custom_' + cw.id] || { id: 'custom_' + cw.id, x: 0, y: 15, w: cw.default_w || 4, h: cw.default_h || 3, enabled: true };
-             if (customConf.enabled !== false) {
+             const isCustomEnabled = (customConf && customConf.enabled !== undefined) ? (customConf.enabled !== false && customConf.enabled !== 0 && customConf.enabled !== 'false') : true;
+             if (isCustomEnabled) {
         %>
         <div class="grid-stack-item" gs-id="custom_<%= cw.id %>" gs-x="<%= customConf.x %>" gs-y="<%= customConf.y %>" gs-w="<%= customConf.w %>" gs-h="<%= customConf.h %>" data-title="<%= cw.title %>">
           <div class="grid-stack-item-content">
@@ -1318,13 +1441,13 @@
     <!-- SECTION 2: Supplementary Tools (Telegram Assistant & Focus Controls) -->
     <!-- ======================================================== -->
     <div class="card card-custom mt-2 mb-4 border-light-subtle">
-      <div class="card-header-custom py-2 px-3 d-flex align-items-center justify-content-between cursor-pointer" data-bs-toggle="collapse" data-bs-target="#supplementarySection" aria-expanded="true">
+      <div class="card-header-custom py-2 px-3 d-flex align-items-center justify-content-between cursor-pointer collapsed" data-bs-toggle="collapse" data-bs-target="#supplementarySection" aria-expanded="false">
         <span class="small fw-bold text-secondary d-flex align-items-center gap-2">
-          <i class="bi bi-sliders text-primary"></i> 텔레그램 스마트 비서 & 포모도로 집중 타이머 상세 설정
+          <i class="bi bi-sliders text-primary"></i> 외부 알림 연동 및 포모도로 집중 타이머 상세 설정
         </span>
         <i class="bi bi-chevron-down text-muted small toggle-collapse-icon"></i>
       </div>
-      <div class="collapse show" id="supplementarySection">
+      <div class="collapse" id="supplementarySection">
         <div class="card-body p-3">
           <div class="row g-3">
             
@@ -1333,7 +1456,7 @@
               <!-- Telegram Smart Assistant Widget -->
               <div class="card card-custom mb-3">
                 <div class="card-header-custom">
-                  <span class="fs-6"><i class="bi bi-telegram text-primary me-1"></i> 텔레그램 스마트 비서</span>
+                  <span class="fs-6"><i class="bi bi-telegram text-primary me-1"></i> 텔레그램 알림 설정</span>
                   <% if (user.telegram_chat_id) { %>
                     <span class="badge bg-success">연동 완료</span>
                   <% } else { %>
@@ -1585,12 +1708,24 @@
                 <option value="TODO">할 일 (TODO)</option>
                 <option value="IN_PROGRESS">진행 중 (IN_PROGRESS)</option>
                 <option value="DONE">완료 (DONE)</option>
+                <option value="EXPIRED">만료 (EXPIRED)</option>
               </select>
             </div>
 
             <div class="mb-2">
               <label class="form-label small fw-semibold">세부 메모 & 진행 순서</label>
               <textarea id="editDescription" name="description" rows="3" class="form-control form-control-sm"></textarea>
+            </div>
+
+            <!-- Subtask Checklist Reordering (first.md 6번) -->
+            <div class="mb-3" id="editModalSubtasksSection">
+              <label class="form-label small fw-semibold d-flex justify-content-between align-items-center mb-1">
+                <span><i class="bi bi-list-check me-1 text-primary"></i> 세부 할 일 (체크리스트 순서 변경)</span>
+                <span class="badge bg-secondary-subtle text-secondary" id="editModalSubtaskCount">0개</span>
+              </label>
+              <div id="editModalSubtaskList" class="d-flex flex-column gap-1 border rounded p-2 bg-light-subtle" style="max-height: 160px; overflow-y: auto;">
+                <div class="text-muted smaller text-center py-2" id="editModalNoSubtasks">등록된 세부 할 일이 없습니다.</div>
+              </div>
             </div>
 
             <div class="form-check form-switch mb-1">
@@ -1617,21 +1752,422 @@
 
   <!-- Schedules Data for Client JavaScript -->
   <script>
-    // Embedded safe JSON of user teams and schedules
+    window.IS_GUEST = <%= Boolean(locals.isGuest) %>;
     window.USER_TEAMS = <%- JSON.stringify(myTeams || []) %>;
-    const userSchedules = [
-      <% schedules.forEach((s, idx) => { %>
-        {
-          id: <%= s.id %>,
-          title: "<%= s.title.replace(/"/g, '\\"') %>",
-          due_datetime: "<%= s.due_datetime || '' %>",
-          category: "<%= s.category %>",
-          status: "<%= s.status %>",
-          is_top3: <%= s.is_top3 %>,
-          is_important: <%= s.is_important %>
-        }<%= idx < schedules.length - 1 ? ',' : '' %>
-      <% }) %>
-    ];
+
+    // Guest Mode Manager (third.md 2번)
+    window.GuestMode = {
+      isGuest: Boolean(window.IS_GUEST),
+      storageKey: 'worksmarter_guest_schedules',
+      memoKey: 'worksmarter_guest_memo',
+      layoutKey: 'worksmarter_guest_layout',
+
+      getSchedules: function() {
+        try {
+          const raw = localStorage.getItem(this.storageKey);
+          if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return [];
+      },
+
+      saveSchedules: function(schedules) {
+        try {
+          localStorage.setItem(this.storageKey, JSON.stringify(schedules));
+          window.userSchedules = schedules;
+        } catch (e) {
+          console.error('Failed to save guest schedules:', e);
+        }
+      },
+
+      getMemo: function() {
+        try {
+          return localStorage.getItem(this.memoKey) || '';
+        } catch (e) {
+          return '';
+        }
+      },
+
+      saveMemo: function(text) {
+        try {
+          localStorage.setItem(this.memoKey, text);
+        } catch (e) {}
+      },
+
+      getLayout: function() {
+        try {
+          const raw = localStorage.getItem(this.layoutKey);
+          if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return null;
+      },
+
+      saveLayout: function(layout) {
+        try {
+          localStorage.setItem(this.layoutKey, JSON.stringify(layout));
+        } catch (e) {}
+      },
+
+      init: function() {
+        if (!this.isGuest) return;
+
+        let schedules = this.getSchedules();
+        if (!schedules || schedules.length === 0) {
+          const today = new Date();
+          const y = today.getFullYear();
+          const m = String(today.getMonth() + 1).padStart(2, '0');
+          const d = String(today.getDate()).padStart(2, '0');
+          const todayDate = `${y}-${m}-${d}`;
+
+          schedules = [
+            {
+              id: 1001,
+              title: "WorkSmarter 핵심 기능 둘러보기",
+              description: "위젯 크기 조절, 칸반 보드 카드 드래그, 캘린더 날짜 이동을 자유롭게 체험해 보세요.",
+              due_datetime: `${todayDate} 18:00`,
+              category: "업무",
+              status: "IN_PROGRESS",
+              is_top3: 1,
+              is_important: 1,
+              percent: 50,
+              subtasks: [
+                { id: 1, schedule_id: 1001, title: "모듈형 위젯 크기 및 위치 조정해보기", is_done: 1, sort_order: 1 },
+                { id: 2, schedule_id: 1001, title: "일정 카드를 칸반 또는 캘린더에서 드래그해보기", is_done: 0, sort_order: 2 }
+              ]
+            },
+            {
+              id: 1002,
+              title: "새 일정 등록해보기",
+              description: "좌측 하단 '빠른 일정 등록' 모듈에서 일정을 추가하면 localStorage에 즉시 저장됩니다.",
+              due_datetime: `${todayDate} 20:00`,
+              category: "개인",
+              status: "TODO",
+              is_top3: 1,
+              is_important: 0,
+              percent: 0,
+              subtasks: []
+            },
+            {
+              id: 1003,
+              title: "메모 작성 및 대시보드 커스텀",
+              description: "메모장에 내용을 입력하면 브라우저에 자동 보관됩니다.",
+              due_datetime: "",
+              category: "자기계발",
+              status: "DONE",
+              is_top3: 0,
+              is_important: 0,
+              percent: 100,
+              subtasks: []
+            }
+          ];
+          this.saveSchedules(schedules);
+        }
+        window.userSchedules = schedules;
+
+        // Restore Memo
+        const memoEl = document.getElementById('dashboardMemoInput');
+        if (memoEl) {
+          memoEl.value = this.getMemo();
+        }
+
+        // Intercept Add Schedule Form
+        const addForm = document.querySelector('form[action="/schedules"]');
+        if (addForm) {
+          addForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const titleInput = addForm.querySelector('[name="title"]');
+            const descInput = addForm.querySelector('[name="description"]');
+            const dueInput = addForm.querySelector('[name="due_datetime"]');
+            const catInput = addForm.querySelector('[name="category"]');
+            const top3Input = addForm.querySelector('[name="is_top3"]');
+            const impInput = addForm.querySelector('[name="is_important"]');
+            const noDeadline = addForm.querySelector('[name="no_deadline"]');
+
+            const title = titleInput ? titleInput.value.trim() : '';
+            if (!title) return;
+
+            let due_datetime = dueInput ? dueInput.value : '';
+            if (noDeadline && noDeadline.checked) {
+              due_datetime = '';
+            }
+
+            const newSched = {
+              id: Date.now(),
+              title: title,
+              description: descInput ? descInput.value : '',
+              due_datetime: due_datetime,
+              category: catInput ? catInput.value : '업무',
+              status: 'TODO',
+              is_top3: (top3Input && top3Input.checked) ? 1 : 0,
+              is_important: (impInput && impInput.checked) ? 1 : 0,
+              percent: 0,
+              subtasks: []
+            };
+
+            const currentList = this.getSchedules();
+            currentList.unshift(newSched);
+            this.saveSchedules(currentList);
+            addForm.reset();
+            this.renderAll();
+            if (typeof showAlert === 'function') {
+              showAlert(`게스트 일정 "${title}"이(가) 브라우저에 추가되었습니다.`);
+            }
+          });
+        }
+
+        // Intercept Edit Schedule Form
+        const editForm = document.getElementById('editScheduleForm');
+        if (editForm) {
+          editForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = editForm.getAttribute('data-schedule-id');
+            const currentList = this.getSchedules();
+            const sched = currentList.find(s => String(s.id) === String(id));
+            if (sched) {
+              sched.title = document.getElementById('editTitle').value.trim();
+              sched.description = document.getElementById('editDescription').value;
+              const noDeadline = document.getElementById('editNoDeadline')?.checked;
+              const dueVal = document.getElementById('editDueDateTime')?.value;
+              sched.due_datetime = noDeadline ? '' : (dueVal ? dueVal.replace('T', ' ') : '');
+              sched.category = document.getElementById('editCategory').value;
+              sched.is_top3 = document.getElementById('editIsTop3').checked ? 1 : 0;
+              sched.is_important = document.getElementById('editIsImportant').checked ? 1 : 0;
+              const statusEl = document.getElementById('editStatus');
+              if (statusEl) sched.status = statusEl.value;
+              this.saveSchedules(currentList);
+              this.renderAll();
+              const modalEl = document.getElementById('editScheduleModal');
+              const modal = bootstrap.Modal.getInstance(modalEl);
+              if (modal) modal.hide();
+            }
+          });
+        }
+
+        this.renderAll();
+      },
+
+      renderAll: function() {
+        const schedules = this.getSchedules();
+        window.userSchedules = schedules;
+        this.renderKanban(schedules);
+        this.renderTop3(schedules);
+        if (typeof renderCalendar === 'function') {
+          renderCalendar();
+        }
+        if (typeof refreshProductivityStats === 'function') {
+          refreshProductivityStats();
+        }
+      },
+
+      renderTop3: function(schedules) {
+        const top3DropzoneBody = document.querySelector('.top3-dropzone-body');
+        if (!top3DropzoneBody) return;
+
+        const top3Items = schedules.filter(s => s.is_top3 === 1);
+        const countBadge = document.querySelector('.widget-drag-handle .badge');
+        if (countBadge && countBadge.textContent.includes('진행 중:')) {
+          countBadge.textContent = `진행 중: ${top3Items.length} / 3`;
+        }
+
+        if (top3Items.length === 0) {
+          top3DropzoneBody.innerHTML = `
+            <div class="text-center py-5 text-muted">
+              <i class="bi bi-stars fs-1 text-secondary opacity-50 mb-2 d-block"></i>
+              <p class="mb-1 fw-semibold">설정된 Top 3 핵심 목표가 없습니다.</p>
+              <p class="small text-secondary mb-0">하단의 개인 일정을 이곳으로 드래그 앤 드롭하여 오늘의 핵심 목표로 등록하세요!</p>
+            </div>
+          `;
+          return;
+        }
+
+        let cardsHtml = '<div class="row g-3">';
+        top3Items.forEach((sched, idx) => {
+          const escapeTitle = (sched.title || '').replace(/"/g, '&quot;');
+          cardsHtml += `
+            <div class="col-md-4">
+              <div class="card card-custom top3-card h-100 p-3 shadow-sm d-flex flex-column justify-content-between"
+                   draggable="true"
+                   data-drag-source="TOP3"
+                   data-drag-type="PERSONAL"
+                   data-drag-id="${sched.id}">
+                <div>
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="top3-badge">Top ${idx + 1}</span>
+                    <div class="d-flex align-items-center gap-1">
+                      <span class="badge badge-cat-${sched.category} border">${sched.category}</span>
+                      <button type="button" class="btn btn-sm btn-link text-muted p-0 ms-1 top3-remove-btn" 
+                              onclick="GuestMode.removeTop3(${sched.id})" 
+                              title="Top 3에서 해제">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <h6 class="fw-bold mb-1 text-dark text-truncate" title="${escapeTitle}">${escapeTitle}</h6>
+                  <div class="small text-muted mb-2">
+                    ${sched.due_datetime ? `<i class="bi bi-clock me-1"></i>${sched.due_datetime}` : '<span class="badge bg-secondary text-white"><i class="bi bi-infinity me-1"></i>상시 일정</span>'}
+                  </div>
+                </div>
+
+                <div>
+                  <div class="d-flex align-items-center justify-content-between small text-muted mb-1">
+                    <span>진행률</span>
+                    <strong class="text-primary">${sched.percent || 0}%</strong>
+                  </div>
+                  <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: ${sched.percent || 0}%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        cardsHtml += '</div>';
+        top3DropzoneBody.innerHTML = cardsHtml;
+      },
+
+      renderKanban: function(schedules) {
+        const statuses = ['TODO', 'IN_PROGRESS', 'DONE', 'EXPIRED'];
+        statuses.forEach(status => {
+          const col = document.querySelector(`#kanbanView .kanban-col[data-status="${status}"]`);
+          if (!col) return;
+          const countBadge = col.querySelector('.kanban-col-header .badge');
+          const cardsContainer = col.querySelector('.kanban-cards');
+          if (!cardsContainer) return;
+
+          const items = schedules.filter(s => (s.status || 'TODO') === status);
+          if (countBadge) countBadge.textContent = items.length;
+
+          cardsContainer.innerHTML = '';
+          items.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'kanban-card' + (status === 'DONE' ? ' done-card' : '');
+            card.draggable = true;
+            card.setAttribute('data-drag-source', 'WORKSPACE');
+            card.setAttribute('data-drag-type', 'PERSONAL');
+            card.setAttribute('data-drag-id', s.id);
+            card.setAttribute('data-current-status', s.status);
+
+            const safeTitle = (s.title || '').replace(/"/g, '&quot;');
+            const safeDesc = (s.description || '').replace(/"/g, '&quot;');
+
+            card.innerHTML = `
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge badge-cat-${s.category} border">${s.category}</span>
+                </div>
+                <div class="dropdown">
+                  <button class="btn btn-link btn-sm text-muted p-0" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots-vertical"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end shadow-sm small">
+                    <li>
+                      <button class="dropdown-item" type="button" onclick="GuestMode.toggleTop3(${s.id})">
+                        <i class="bi ${s.is_top3 ? 'bi-star-fill text-warning' : 'bi-star'} me-1"></i> Top 3 토글
+                      </button>
+                    </li>
+                    <li>
+                      <button class="dropdown-item" type="button" onclick="openEditModal('${s.id}', '${safeTitle.replace(/'/g, "\\'")}', '${safeDesc.replace(/'/g, "\\'")}', '${s.due_datetime || ''}', '${s.category}', '${s.is_top3}', '${s.is_important}', '${s.status}')">
+                        <i class="bi bi-pencil me-1"></i> 수정
+                      </button>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <button class="dropdown-item text-danger" type="button" onclick="GuestMode.deleteSchedule(${s.id})">
+                        <i class="bi bi-trash me-1"></i> 삭제
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <h6 class="fw-bold mb-1 ${status === 'DONE' ? 'text-decoration-line-through text-muted' : 'text-dark'}">${safeTitle}</h6>
+              <div class="small text-muted mb-2">
+                ${s.due_datetime ? `<i class="bi bi-clock me-1"></i>${s.due_datetime}` : '<span class="badge bg-secondary text-white"><i class="bi bi-infinity me-1"></i>상시 일정</span>'}
+              </div>
+
+              ${s.description ? `<p class="small text-secondary mb-2 text-truncate" style="max-height: 40px;">${safeDesc}</p>` : ''}
+
+              <div class="d-flex align-items-center gap-1 border-top pt-2">
+                ${status !== 'TODO' ? `<button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="GuestMode.updateStatus(${s.id}, 'TODO')">TODO</button>` : ''}
+                ${status !== 'IN_PROGRESS' ? `<button type="button" class="btn btn-outline-primary btn-sm py-0 px-2" onclick="GuestMode.updateStatus(${s.id}, 'IN_PROGRESS')">진행</button>` : ''}
+                ${status !== 'DONE' ? `<button type="button" class="btn btn-outline-success btn-sm py-0 px-2" onclick="GuestMode.updateStatus(${s.id}, 'DONE')">완료</button>` : ''}
+              </div>
+            `;
+
+            card.addEventListener('dragstart', (ev) => {
+              if (typeof currentDragItem !== 'undefined') {
+                currentDragItem = { source: 'WORKSPACE', type: 'PERSONAL', id: s.id, currentStatus: s.status, element: card };
+              }
+              ev.dataTransfer.setData('text/plain', JSON.stringify({ id: s.id, due: s.due_datetime, source: 'WORKSPACE', type: 'PERSONAL', currentStatus: s.status }));
+            });
+
+            cardsContainer.appendChild(card);
+          });
+        });
+      },
+
+      updateStatus: function(id, newStatus) {
+        const schedules = this.getSchedules();
+        const item = schedules.find(s => String(s.id) === String(id));
+        if (item) {
+          item.status = newStatus;
+          if (newStatus === 'DONE') item.percent = 100;
+          else if (newStatus === 'TODO') item.percent = 0;
+          this.saveSchedules(schedules);
+          this.renderAll();
+        }
+      },
+
+      toggleTop3: function(id) {
+        const schedules = this.getSchedules();
+        const item = schedules.find(s => String(s.id) === String(id));
+        if (item) {
+          item.is_top3 = item.is_top3 ? 0 : 1;
+          this.saveSchedules(schedules);
+          this.renderAll();
+        }
+      },
+
+      removeTop3: function(id) {
+        const schedules = this.getSchedules();
+        const item = schedules.find(s => String(s.id) === String(id));
+        if (item) {
+          item.is_top3 = 0;
+          this.saveSchedules(schedules);
+          this.renderAll();
+        }
+      },
+
+      deleteSchedule: function(id) {
+        if (!confirm('이 일정을 삭제하시겠습니까?')) return;
+        let schedules = this.getSchedules();
+        schedules = schedules.filter(s => String(s.id) !== String(id));
+        this.saveSchedules(schedules);
+        this.renderAll();
+      }
+    };
+
+    if (window.IS_GUEST) {
+      window.userSchedules = window.GuestMode.getSchedules();
+    } else {
+      window.userSchedules = [
+        <% schedules.forEach((s, idx) => { %>
+          {
+            id: <%= s.id %>,
+            title: <%- JSON.stringify(s.title) %>,
+            description: <%- JSON.stringify(s.description || '') %>,
+            due_datetime: "<%= s.due_datetime || '' %>",
+            category: "<%= s.category %>",
+            status: "<%= s.status %>",
+            is_top3: <%= s.is_top3 %>,
+            is_important: <%= s.is_important %>,
+            percent: <%= s.percent || 0 %>,
+            subtasks: <%- JSON.stringify(s.subtasks || []) %>
+          }<%= idx < schedules.length - 1 ? ',' : '' %>
+        <% }) %>
+      ];
+    }
+    const userSchedules = window.userSchedules;
 
     // ==========================================
     // 1. Chart.js Category Donut Chart & Refresh (stastics.md)
@@ -2078,12 +2614,23 @@
 
     // Initialize custom sounds, calendar, pomodoro sync, gridstack, clock & PIP on page load
     document.addEventListener('DOMContentLoaded', () => {
+      // 외부 알림 & 포모도로 집중 타이머 상세 설정 바는 기본 접힌 상태로 시작
+      const supp = document.getElementById('supplementarySection');
+      if (supp) {
+        supp.classList.remove('show');
+      }
+
+      if (window.IS_GUEST && window.GuestMode) {
+        window.GuestMode.init();
+      }
+
       loadCustomSounds();
       renderCalendar();
       initDashboardPomodoro();
       initGridStackDashboard();
       initClockWidget();
       restoreSavedPipWindows();
+      if (typeof initUndatedDropzone === 'function') initUndatedDropzone();
     });
 
     // ==========================================
@@ -2092,18 +2639,94 @@
     let dashboardGrid = null;
     let isDashboardEditMode = false;
 
+    // Grid Spacing State: 0 (밀착, 0px) vs 8 (분리, 8px)
+    let currentGridMargin = 0;
+    try {
+      const savedMargin = localStorage.getItem('worksmarter_grid_margin');
+      if (savedMargin !== null && !isNaN(parseInt(savedMargin, 10))) {
+        currentGridMargin = parseInt(savedMargin, 10);
+      }
+    } catch (e) {
+      currentGridMargin = 0;
+    }
+
+    function updateGridSpacingUI(margin) {
+      const btn = document.getElementById('btnToggleGridSpacing');
+      const text = document.getElementById('gridSpacingText');
+      const icon = document.getElementById('gridSpacingIcon');
+      const gridEl = document.getElementById('dashboardGrid');
+      const isZero = (margin === 0);
+
+      if (gridEl) {
+        if (isZero) {
+          gridEl.classList.add('grid-margin-0');
+        } else {
+          gridEl.classList.remove('grid-margin-0');
+        }
+      }
+
+      if (btn && text) {
+        if (isZero) {
+          text.textContent = '간격: 밀착(0px)';
+          btn.title = '모듈 사이 간격: 빈틈 없는 밀착 0px (클릭하여 카드 분리 8px 간격으로 전환)';
+          btn.classList.add('btn-light');
+          btn.classList.remove('btn-outline-secondary');
+          if (icon) icon.className = 'bi bi-border-outer';
+        } else {
+          text.textContent = '간격: 분리(8px)';
+          btn.title = '모듈 사이 간격: 균일한 카드 분리 8px (클릭하여 경계선 밀착 0px로 전환)';
+          btn.classList.remove('btn-light');
+          btn.classList.add('btn-outline-secondary');
+          if (icon) icon.className = 'bi bi-grid-3x3';
+        }
+      }
+    }
+
+    function toggleGridSpacing() {
+      if (!dashboardGrid) return;
+      currentGridMargin = (currentGridMargin === 0) ? 8 : 0;
+      try {
+        localStorage.setItem('worksmarter_grid_margin', currentGridMargin);
+      } catch (e) {}
+
+      dashboardGrid.margin(currentGridMargin);
+      updateGridSpacingUI(currentGridMargin);
+
+      if (window.productivityChart && typeof window.productivityChart.resize === 'function') {
+        try { window.productivityChart.resize(); } catch (e) {}
+      }
+
+      if (typeof showAlert === 'function') {
+        showAlert(currentGridMargin === 0 
+          ? '모듈 간격을 상하·좌우 빈틈없는 [0px 경계선 밀착 모드]로 설정했습니다.' 
+          : '모듈 간격을 상하·좌우 균일한 [8px 카드 분리 모드]로 설정했습니다.');
+      }
+    }
+    window.toggleGridSpacing = toggleGridSpacing;
+
     function initGridStackDashboard() {
       const gridEl = document.getElementById('dashboardGrid');
       if (!gridEl || typeof GridStack === 'undefined') return;
+
+      updateGridSpacingUI(currentGridMargin);
 
       dashboardGrid = GridStack.init({
         column: 12,
         cellHeight: 85,
         animate: true,
-        margin: 10,
+        margin: currentGridMargin,
         handle: '.widget-drag-handle',
         staticGrid: true // default locked mode
       }, gridEl);
+
+      if (window.IS_GUEST && window.GuestMode) {
+        const savedGuestLayout = window.GuestMode.getLayout();
+        if (savedGuestLayout && Array.isArray(savedGuestLayout) && savedGuestLayout.length > 0) {
+          try {
+            dashboardGrid.load(savedGuestLayout);
+          } catch (e) {}
+        }
+      }
 
       // Listen to change event (drag or resize)
       dashboardGrid.on('change', function(event, items) {
@@ -2127,6 +2750,7 @@
 
       const gridEl = document.getElementById('dashboardGrid');
       const btn = document.getElementById('btnToggleEditMode');
+      const editGroup = document.getElementById('editModeControlsGroup');
 
       if (isDashboardEditMode) {
         if (gridEl) gridEl.classList.add('dashboard-edit-mode');
@@ -2134,20 +2758,156 @@
           btn.classList.replace('btn-outline-secondary', 'btn-primary');
           btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i><span id="editModeBtnText">편집 완료 (잠금)</span>';
         }
+        if (editGroup) {
+          editGroup.classList.replace('d-none', 'd-flex');
+        }
       } else {
         if (gridEl) gridEl.classList.remove('dashboard-edit-mode');
         if (btn) {
           btn.classList.replace('btn-primary', 'btn-outline-secondary');
           btn.innerHTML = '<i class="bi bi-pencil-square me-1"></i><span id="editModeBtnText">레이아웃 편집 모드</span>';
         }
+        if (editGroup) {
+          editGroup.classList.replace('d-flex', 'd-none');
+        }
       }
     }
+
+    // ==========================================
+    // Horizontal Gap Elimination & Compact Helpers
+    // ==========================================
+    function getGridNodes() {
+      if (!dashboardGrid) return [];
+      return dashboardGrid.getGridItems().map(el => {
+        const node = el.gridstackNode || {};
+        return {
+          el,
+          id: el.getAttribute('gs-id'),
+          x: typeof node.x === 'number' ? node.x : parseInt(el.getAttribute('gs-x') || '0', 10),
+          y: typeof node.y === 'number' ? node.y : parseInt(el.getAttribute('gs-y') || '0', 10),
+          w: typeof node.w === 'number' ? node.w : parseInt(el.getAttribute('gs-w') || '1', 10),
+          h: typeof node.h === 'number' ? node.h : parseInt(el.getAttribute('gs-h') || '1', 10)
+        };
+      });
+    }
+
+    function checkCollision(a, b) {
+      return !(
+        a.x + a.w <= b.x ||
+        a.x >= b.x + b.w ||
+        a.y + a.h <= b.y ||
+        a.y >= b.y + b.h
+      );
+    }
+
+    function compactDashboardHorizontal(silent = false) {
+      if (!dashboardGrid) return;
+      dashboardGrid.batchUpdate();
+
+      const items = getGridNodes();
+      items.sort((a, b) => a.x - b.x || a.y - b.y);
+
+      let anyMoved = false;
+      items.forEach(item => {
+        while (item.x > 0) {
+          const test = { ...item, x: item.x - 1 };
+          const hasCollision = items.some(other => other.id !== item.id && checkCollision(test, other));
+          if (hasCollision) break;
+          item.x = test.x;
+          dashboardGrid.update(item.el, { x: item.x });
+          anyMoved = true;
+        }
+      });
+
+      dashboardGrid.batchUpdate(false);
+      saveDashboardLayoutChange();
+      if (!silent && typeof showAlert === 'function') {
+        showAlert(anyMoved ? '모듈의 좌우 빈 공간을 왼쪽으로 밀착 정렬했습니다.' : '이미 좌우 빈틈 없이 밀착되어 있습니다.');
+      }
+    }
+    window.compactDashboardHorizontal = compactDashboardHorizontal;
+
+    function fillDashboardRowWidths() {
+      if (!dashboardGrid) return;
+
+      // 1. First compact leftwards to eliminate gaps between items
+      compactDashboardHorizontal(true);
+
+      dashboardGrid.batchUpdate();
+      const items = getGridNodes();
+
+      // Sort by x descending so rightmost items expand to fill up to 12 columns
+      items.sort((a, b) => (b.x + b.w) - (a.x + a.w));
+
+      let anyExpanded = false;
+      items.forEach(item => {
+        while (item.x + item.w < 12) {
+          const test = { ...item, w: item.w + 1 };
+          const hasCollision = items.some(other => other.id !== item.id && checkCollision(test, other));
+          if (hasCollision) break;
+          item.w = test.w;
+          dashboardGrid.update(item.el, { w: item.w });
+          anyExpanded = true;
+        }
+      });
+
+      dashboardGrid.batchUpdate(false);
+      saveDashboardLayoutChange();
+      if (typeof showAlert === 'function') {
+        showAlert('각 행의 모듈 너비를 12열 그리드에 맞춰 빈틈없이 꽉 채웠습니다.');
+      }
+      if (window.productivityChart && typeof window.productivityChart.resize === 'function') {
+        try { window.productivityChart.resize(); } catch (e) {}
+      }
+    }
+    window.fillDashboardRowWidths = fillDashboardRowWidths;
+
+    async function resetDashboardPreset() {
+      let ok = true;
+      if (typeof showConfirm === 'function') {
+        ok = await showConfirm('대시보드 위젯 배치를 기본 프리셋으로 초기화하시겠습니까?', '배치 초기화');
+      } else {
+        ok = confirm('대시보드 위젯 배치를 기본 프리셋으로 초기화하시겠습니까?');
+      }
+      if (!ok) return;
+
+      try {
+        const res = await fetch('/api/dashboard/widgets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reset: true })
+        });
+        const data = await res.json();
+        if (data && data.success) {
+          window.location.reload();
+        } else {
+          if (typeof showAlert === 'function') showAlert((data && data.error) || '초기화에 실패했습니다.');
+          else alert('초기화에 실패했습니다.');
+        }
+      } catch (err) {
+        console.error('Reset preset error:', err);
+        window.location.reload();
+      }
+    }
+    window.resetDashboardPreset = resetDashboardPreset;
 
     let layoutSaveDebounce = null;
     function saveDashboardLayoutChange() {
       clearTimeout(layoutSaveDebounce);
       layoutSaveDebounce = setTimeout(async () => {
         if (!dashboardGrid) return;
+        if (window.IS_GUEST && window.GuestMode) {
+          const serialized = dashboardGrid.save(false);
+          const layoutData = serialized.map(item => ({
+            id: item.id,
+            x: item.x,
+            y: item.y,
+            w: item.w,
+            h: item.h
+          }));
+          window.GuestMode.saveLayout(layoutData);
+          return;
+        }
         try {
           const serialized = dashboardGrid.save(false);
           const layoutData = serialized.map(item => ({
@@ -2208,6 +2968,14 @@
         if (statusEl) {
           statusEl.textContent = '저장 중...';
           statusEl.className = 'badge bg-info-subtle text-info border border-info-subtle smaller';
+        }
+        if (window.IS_GUEST && window.GuestMode) {
+          window.GuestMode.saveMemo(textarea.value);
+          if (statusEl) {
+            statusEl.textContent = '로컬 저장됨 ✓';
+            statusEl.className = 'badge bg-success-subtle text-success border border-success-subtle smaller';
+          }
+          return;
         }
         try {
           const res = await fetch('/api/dashboard/memo', {
@@ -2812,6 +3580,138 @@
     }
     window.toggleDueInput = toggleDueInput;
 
+    function updateUndatedCountBadge() {
+      const list = document.getElementById('undatedSchedulesList');
+      const badge = document.getElementById('undatedCountBadge');
+      const notice = document.getElementById('undatedEmptyNotice');
+      const count = list ? list.children.length : 0;
+      if (badge) badge.textContent = count;
+      if (notice && list) {
+        notice.style.display = (count === 0) ? 'block' : 'none';
+      }
+    }
+
+    function addScheduleToUndatedList(s) {
+      let list = document.getElementById('undatedSchedulesList');
+      const emptyNotice = document.getElementById('undatedEmptyNotice');
+      if (emptyNotice) emptyNotice.style.display = 'none';
+
+      if (!list) {
+        const body = document.querySelector('#undatedSchedulesCollapse .card-body');
+        if (body) {
+          list = document.createElement('div');
+          list.className = 'd-flex flex-column gap-2';
+          list.id = 'undatedSchedulesList';
+          body.appendChild(list);
+        } else {
+          return;
+        }
+      }
+
+      let item = document.getElementById('undatedScheduleItem' + s.id);
+      if (item) return;
+
+      item = document.createElement('div');
+      item.className = 'd-flex align-items-center justify-content-between p-2 rounded border bg-light flex-wrap gap-2 undated-item';
+      item.id = 'undatedScheduleItem' + s.id;
+      item.setAttribute('draggable', 'true');
+      item.setAttribute('data-drag-id', s.id);
+      item.setAttribute('data-drag-source', 'UNDATED');
+      item.setAttribute('data-drag-title', s.title || '');
+      item.setAttribute('data-current-status', s.status || 'TODO');
+      item.style.cursor = 'grab';
+
+      const escapedTitle = (s.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      const escapedDesc = (s.description || '').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+
+      item.innerHTML = `
+        <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+          <span class="badge badge-cat-${s.category || '개인'} border">${s.category || '개인'}</span>
+          <span class="badge bg-secondary text-white smaller">상시 일정</span>
+          <span class="fw-semibold small text-truncate ${s.status === 'DONE' ? 'text-decoration-line-through text-muted' : 'text-dark'}" title="${escapedTitle}">
+            ${escapedTitle}
+          </span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <select class="form-select form-select-sm py-0 ps-2 pe-4" style="font-size: 0.78rem; width: auto;" onchange="updateUndatedStatus(${s.id}, this.value)">
+            <option value="TODO" ${s.status === 'TODO' ? 'selected' : ''}>할 일</option>
+            <option value="IN_PROGRESS" ${s.status === 'IN_PROGRESS' ? 'selected' : ''}>진행 중</option>
+            <option value="DONE" ${s.status === 'DONE' ? 'selected' : ''}>완료</option>
+          </select>
+          <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="openEditModal('${s.id}', '${escapedTitle}', '${escapedDesc}', '', '${s.category || '개인'}', '${s.is_top3 ? 1 : 0}', '${s.is_important ? 1 : 0}', '${s.status || 'TODO'}')" title="일정 수정 및 기한 지정">
+            <i class="bi bi-pencil"></i>
+          </button>
+        </div>
+      `;
+
+      bindUndatedDragHandlers(item, s);
+      list.appendChild(item);
+      updateUndatedCountBadge();
+    }
+
+    function bindUndatedDragHandlers(itemEl, sched) {
+      itemEl.ondragstart = function(ev) {
+        currentDragItem = { source: 'UNDATED', type: 'PERSONAL', id: sched.id, currentStatus: sched.status, element: itemEl };
+        ev.dataTransfer.setData('text/plain', JSON.stringify({ id: sched.id, due: null, source: 'UNDATED', type: 'PERSONAL', currentStatus: sched.status, title: sched.title }));
+        ev.dataTransfer.setData('application/json', JSON.stringify({ id: sched.id, type: 'PERSONAL', source: 'UNDATED', currentStatus: sched.status }));
+        ev.dataTransfer.effectAllowed = 'copyMove';
+      };
+    }
+
+    function initUndatedDropzone() {
+      document.querySelectorAll('.undated-item').forEach(el => {
+        const id = el.getAttribute('data-drag-id');
+        const sched = (typeof userSchedules !== 'undefined') ? userSchedules.find(x => String(x.id) === String(id)) : null;
+        if (sched) bindUndatedDragHandlers(el, sched);
+      });
+
+      const summaryBar = document.querySelector('.undated-summary-bar');
+      if (summaryBar) {
+        summaryBar.ondragover = function(ev) {
+          ev.preventDefault();
+          summaryBar.classList.add('border-primary', 'bg-light-subtle');
+        };
+        summaryBar.ondragleave = function(ev) {
+          summaryBar.classList.remove('border-primary', 'bg-light-subtle');
+        };
+        summaryBar.ondrop = async function(ev) {
+          ev.preventDefault();
+          summaryBar.classList.remove('border-primary', 'bg-light-subtle');
+          const dataStr = ev.dataTransfer.getData('text/plain');
+          if (!dataStr) return;
+          try {
+            const parsed = JSON.parse(dataStr);
+            const id = parsed.id;
+            const due = parsed.due;
+            if (!id) return;
+            if (!due) return; // already undated
+
+            const res = await fetch(`/schedules/${id}/reschedule`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ due_datetime: null })
+            });
+            const data = await res.json();
+            if (res.ok && data && data.success) {
+              const target = (typeof userSchedules !== 'undefined') ? userSchedules.find(x => String(x.id) === String(id)) : null;
+              if (target) {
+                target.due_datetime = '';
+                if (data.new_status) target.status = data.new_status;
+              }
+              renderCalendar();
+              addScheduleToUndatedList(target || { id, title: parsed.title || '일정', status: data.new_status || 'TODO', category: '개인' });
+              if (target && data.new_status && typeof syncScheduleStatusInKanban === 'function') {
+                syncScheduleStatusInKanban(id, data.new_status);
+              }
+              showAlert('일정이 기한 미지정(상시 일정)으로 전환되었습니다.');
+            }
+          } catch (err) {
+            console.error('Error dropping on undated dropzone:', err);
+          }
+        };
+      }
+    }
+
     async function updateUndatedStatus(scheduleId, newStatus) {
       try {
         const res = await fetch(`/schedules/${scheduleId}/status`, {
@@ -2844,6 +3744,78 @@
       }
     }
     window.updateUndatedStatus = updateUndatedStatus;
+
+    function renderEditModalSubtasks(scheduleId) {
+      const container = document.getElementById('editModalSubtaskList');
+      const countBadge = document.getElementById('editModalSubtaskCount');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const sched = (typeof userSchedules !== 'undefined') ? userSchedules.find(x => String(x.id) === String(scheduleId)) : null;
+      const subtasks = (sched && sched.subtasks) ? sched.subtasks : [];
+
+      if (countBadge) countBadge.textContent = `${subtasks.length}개`;
+
+      if (subtasks.length === 0) {
+        container.innerHTML = '<div class="text-muted smaller text-center py-2" id="editModalNoSubtasks">등록된 세부 할 일이 없습니다.</div>';
+        return;
+      }
+
+      subtasks.forEach((st, idx) => {
+        const item = document.createElement('div');
+        item.className = 'd-flex align-items-center justify-content-between p-1 px-2 rounded bg-white border smaller subtask-reorder-item';
+        item.setAttribute('data-subtask-id', st.id);
+
+        const checkIcon = st.is_done ? '<i class="bi bi-check-circle-fill text-success me-1"></i>' : '<i class="bi bi-circle text-secondary me-1"></i>';
+        const escapedTitle = (st.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        item.innerHTML = `
+          <input type="hidden" name="subtask_ids[]" value="${st.id}">
+          <div class="d-flex align-items-center gap-2 overflow-hidden flex-grow-1 me-2">
+            <i class="bi bi-grip-vertical text-muted"></i>
+            ${checkIcon}
+            <span class="text-truncate ${st.is_done ? 'text-decoration-line-through text-muted' : ''}">${escapedTitle}</span>
+          </div>
+          <div class="btn-group btn-group-sm flex-shrink-0">
+            <button type="button" class="btn btn-outline-secondary py-0 px-1 btn-move-up" style="font-size: 11px;" title="위로 이동" ${idx === 0 ? 'disabled' : ''}>▲</button>
+            <button type="button" class="btn btn-outline-secondary py-0 px-1 btn-move-down" style="font-size: 11px;" title="아래로 이동" ${idx === subtasks.length - 1 ? 'disabled' : ''}>▼</button>
+          </div>
+        `;
+
+        item.querySelector('.btn-move-up').addEventListener('click', (e) => {
+          e.preventDefault();
+          moveSubtaskItem(item, -1, scheduleId);
+        });
+        item.querySelector('.btn-move-down').addEventListener('click', (e) => {
+          e.preventDefault();
+          moveSubtaskItem(item, 1, scheduleId);
+        });
+
+        container.appendChild(item);
+      });
+    }
+
+    function moveSubtaskItem(item, direction, scheduleId) {
+      const container = item.parentElement;
+      if (!container) return;
+      if (direction === -1 && item.previousElementSibling) {
+        container.insertBefore(item, item.previousElementSibling);
+      } else if (direction === 1 && item.nextElementSibling) {
+        container.insertBefore(item.nextElementSibling, item);
+      }
+      const items = container.querySelectorAll('.subtask-reorder-item');
+      items.forEach((it, idx) => {
+        const upBtn = it.querySelector('.btn-move-up');
+        const downBtn = it.querySelector('.btn-move-down');
+        if (upBtn) upBtn.disabled = (idx === 0);
+        if (downBtn) downBtn.disabled = (idx === items.length - 1);
+      });
+      const sched = (typeof userSchedules !== 'undefined') ? userSchedules.find(x => String(x.id) === String(scheduleId)) : null;
+      if (sched && sched.subtasks) {
+        const newOrderIds = Array.from(items).map(it => parseInt(it.getAttribute('data-subtask-id'), 10));
+        sched.subtasks.sort((a, b) => newOrderIds.indexOf(a.id) - newOrderIds.indexOf(b.id));
+      }
+    }
 
     function openEditModal(id, title, description, dueDateTime, category, isTop3, isImportant, status) {
       const form = document.getElementById('editScheduleForm');
@@ -2878,6 +3850,8 @@
       if (statusEl) {
         statusEl.value = status || 'TODO';
       }
+
+      renderEditModalSubtasks(id);
       
       const modal = new bootstrap.Modal(document.getElementById('editScheduleModal'));
       modal.show();
@@ -3271,21 +4245,54 @@
             const parsed = JSON.parse(dataStr);
             const id = parsed.id;
             const due = parsed.due || '';
+
+            // [first.md 3번]: 제자리 드래그 앤 드롭 무시
+            if (due && due.startsWith(dateStr)) {
+              return;
+            }
+
             const existingTime = (due && due.includes(' ')) ? due.split(' ')[1] : '18:00';
             const newDueDateTime = `${dateStr} ${existingTime}`;
+
+            if (window.IS_GUEST && window.GuestMode) {
+              const schedules = window.GuestMode.getSchedules();
+              const target = schedules.find(x => String(x.id) === String(id));
+              if (target) {
+                target.due_datetime = newDueDateTime;
+                window.GuestMode.saveSchedules(schedules);
+                window.GuestMode.renderAll();
+                if (typeof showAlert === 'function') {
+                  showAlert(`일정 마감일이 ${dateStr}로 변경되었습니다.`);
+                }
+              }
+              return;
+            }
 
             const res = await fetch(`/schedules/${id}/reschedule`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ due_datetime: newDueDateTime })
             });
-            if (res.ok) {
+            const data = await res.json();
+            if (res.ok && data && data.success) {
               const target = userSchedules.find(x => String(x.id) === String(id));
-              if (target) target.due_datetime = newDueDateTime;
+              if (target) {
+                target.due_datetime = newDueDateTime;
+                if (data.new_status) target.status = data.new_status;
+              }
+              // 기한 미지정 목록에 있었다면 제거
+              const undatedItem = document.getElementById('undatedScheduleItem' + id);
+              if (undatedItem) {
+                undatedItem.remove();
+                if (typeof updateUndatedCountBadge === 'function') updateUndatedCountBadge();
+              }
               renderCalendar();
+              if (target && data.new_status && typeof syncScheduleStatusInKanban === 'function') {
+                syncScheduleStatusInKanban(id, data.new_status);
+              }
               showAlert(`일정 마감일이 ${dateStr}로 변경되었습니다.`);
             } else {
-              showAlert('날짜 변경에 실패했습니다.');
+              showAlert((data && data.error) || '날짜 변경에 실패했습니다.');
             }
           } catch (err) {
             console.error('Drag drop reschedule error:', err);
@@ -3477,6 +4484,10 @@
     });
 
     function addTop3Schedule(type, id) {
+      if (window.IS_GUEST && window.GuestMode) {
+        window.GuestMode.toggleTop3(id);
+        return;
+      }
       fetch('/api/top3/add', {
         method: 'POST',
         headers: {
@@ -3511,6 +4522,10 @@
       if (event) {
         event.stopPropagation();
         event.preventDefault();
+      }
+      if (window.IS_GUEST && window.GuestMode) {
+        window.GuestMode.removeTop3(id);
+        return;
       }
       fetch('/api/top3/remove', {
         method: 'POST',
@@ -3692,6 +4707,10 @@
     }
 
     function updatePersonalScheduleStatus(scheduleId, newStatus, cardEl, targetCol) {
+      if (window.IS_GUEST && window.GuestMode) {
+        window.GuestMode.updateStatus(scheduleId, newStatus);
+        return;
+      }
       const card = cardEl || document.querySelector(`#kanbanView .kanban-card[data-drag-id="${scheduleId}"]`);
 
       fetch(`/schedules/${scheduleId}/status`, {
@@ -3716,17 +4735,22 @@
             if (titleEl) {
               if (newStatus === 'DONE') {
                 card.classList.add('done-card');
-                card.classList.remove('border-primary', 'border-opacity-25');
+                card.classList.remove('border-primary', 'border-opacity-25', 'border-danger', 'border-opacity-50');
                 titleEl.classList.add('text-decoration-line-through', 'text-muted');
-                titleEl.classList.remove('text-dark');
+                titleEl.classList.remove('text-dark', 'text-danger');
               } else if (newStatus === 'IN_PROGRESS') {
-                card.classList.remove('done-card');
+                card.classList.remove('done-card', 'border-danger', 'border-opacity-50');
                 card.classList.add('border-primary', 'border-opacity-25');
-                titleEl.classList.remove('text-decoration-line-through', 'text-muted');
+                titleEl.classList.remove('text-decoration-line-through', 'text-muted', 'text-danger');
                 titleEl.classList.add('text-dark');
-              } else {
+              } else if (newStatus === 'EXPIRED') {
                 card.classList.remove('done-card', 'border-primary', 'border-opacity-25');
+                card.classList.add('border-danger', 'border-opacity-50');
                 titleEl.classList.remove('text-decoration-line-through', 'text-muted');
+                titleEl.classList.add('text-danger');
+              } else {
+                card.classList.remove('done-card', 'border-primary', 'border-opacity-25', 'border-danger', 'border-opacity-50');
+                titleEl.classList.remove('text-decoration-line-through', 'text-muted', 'text-danger');
                 titleEl.classList.add('text-dark');
               }
             }
@@ -3813,6 +4837,23 @@
               </button>
             </form>
           `;
+        } else if (status === 'EXPIRED') {
+          newHtml = `
+            <div class="d-flex gap-1 mt-2">
+              <form action="/schedules/${scheduleId}/status" method="POST" class="m-0 flex-grow-1">
+                <input type="hidden" name="status" value="TODO">
+                <button type="submit" class="btn btn-outline-secondary btn-sm w-100 py-0" style="font-size: 0.75rem;">
+                  <i class="bi bi-arrow-counterclockwise"></i> TODO 복귀
+                </button>
+              </form>
+              <form action="/schedules/${scheduleId}/status" method="POST" class="m-0">
+                <input type="hidden" name="status" value="DONE">
+                <button type="submit" class="btn btn-outline-success btn-sm py-0" style="font-size: 0.75rem;" title="완료 처리">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+              </form>
+            </div>
+          `;
         }
 
         const tempDiv = document.createElement('div');
@@ -3855,17 +4896,22 @@
       if (titleEl) {
         if (newStatus === 'DONE') {
           card.classList.add('done-card');
-          card.classList.remove('border-primary', 'border-opacity-25');
+          card.classList.remove('border-primary', 'border-opacity-25', 'border-danger', 'border-opacity-50');
           titleEl.classList.add('text-decoration-line-through', 'text-muted');
-          titleEl.classList.remove('text-dark');
+          titleEl.classList.remove('text-dark', 'text-danger');
         } else if (newStatus === 'IN_PROGRESS') {
-          card.classList.remove('done-card');
+          card.classList.remove('done-card', 'border-danger', 'border-opacity-50');
           card.classList.add('border-primary', 'border-opacity-25');
-          titleEl.classList.remove('text-decoration-line-through', 'text-muted');
+          titleEl.classList.remove('text-decoration-line-through', 'text-muted', 'text-danger');
           titleEl.classList.add('text-dark');
-        } else {
+        } else if (newStatus === 'EXPIRED') {
           card.classList.remove('done-card', 'border-primary', 'border-opacity-25');
+          card.classList.add('border-danger', 'border-opacity-50');
           titleEl.classList.remove('text-decoration-line-through', 'text-muted');
+          titleEl.classList.add('text-danger');
+        } else {
+          card.classList.remove('done-card', 'border-primary', 'border-opacity-25', 'border-danger', 'border-opacity-50');
+          titleEl.classList.remove('text-decoration-line-through', 'text-muted', 'text-danger');
           titleEl.classList.add('text-dark');
         }
       }
@@ -4040,6 +5086,23 @@
           }
         }
       });
+
+      // Update in-memory userSchedules object
+      if (typeof userSchedules !== 'undefined') {
+        const target = userSchedules.find(x => String(x.id) === String(scheduleId));
+        if (target) {
+          target.subtasks = target.subtasks || [];
+          target.percent = data.progressPercent;
+          if (data.subtask && !action) {
+            target.subtasks.push(data.subtask);
+          } else if (action === 'toggle' && subtaskId) {
+            const st = target.subtasks.find(x => String(x.id) === String(subtaskId));
+            if (st) st.is_done = data.is_done;
+          } else if (action === 'delete' && subtaskId) {
+            target.subtasks = target.subtasks.filter(x => String(x.id) !== String(subtaskId));
+          }
+        }
+      }
     }
 
     function escapeHtml(str) {
@@ -4068,11 +5131,13 @@
             const bodyObj = {
               title: formData.get('title'),
               due_datetime: formData.get('due_datetime'),
+              no_deadline: formData.get('no_deadline'),
               category: formData.get('category'),
               description: formData.get('description'),
               status: formData.get('status'),
               is_top3: formData.get('is_top3') ? '1' : '0',
-              is_important: formData.get('is_important') ? '1' : '0'
+              is_important: formData.get('is_important') ? '1' : '0',
+              subtask_ids: formData.getAll('subtask_ids[]')
             };
             const scheduleId = editForm.getAttribute('data-schedule-id');
 

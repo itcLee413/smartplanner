@@ -99,8 +99,11 @@
 <!-- 4. Notion-Style Context Menu for Schedules -->
 <div id="notionContextMenu" class="notion-context-menu">
   <div class="px-2 py-1 smaller fw-bold text-muted border-bottom mb-1" id="ctxScheduleTitle">일정 관리</div>
+  <button type="button" class="ctx-item" id="ctxActionViewDetails">
+    <i class="bi bi-eye text-primary"></i> <span>일정 상세보기</span>
+  </button>
   <button type="button" class="ctx-item" id="ctxActionEdit">
-    <i class="bi bi-pencil text-primary"></i> <span>일정 수정</span>
+    <i class="bi bi-pencil text-secondary"></i> <span>일정 수정</span>
   </button>
   <button type="button" class="ctx-item" id="ctxActionShare">
     <i class="bi bi-people text-info"></i> <span>소속 팀에 공유(업로드)</span>
@@ -116,10 +119,46 @@
   <button type="button" class="ctx-item" id="ctxStatusDone">
     <i class="bi bi-check2-circle text-success"></i> <span>완료 (DONE)</span>
   </button>
+  <button type="button" class="ctx-item" id="ctxStatusExpired">
+    <i class="bi bi-exclamation-triangle text-danger"></i> <span>만료 (EXPIRED)</span>
+  </button>
   <div class="ctx-divider"></div>
   <button type="button" class="ctx-item danger" id="ctxActionDelete">
     <i class="bi bi-trash"></i> <span>일정 삭제</span>
   </button>
+</div>
+
+<!-- 4-1. Lightweight Floating Popover for Schedule Details (first.md 5번) -->
+<div id="scheduleDetailPopover" class="schedule-detail-popover" style="display: none;">
+  <div class="d-flex align-items-center justify-content-between p-2 px-3 border-bottom bg-light">
+    <div class="d-flex align-items-center gap-1 overflow-hidden me-2">
+      <span class="badge bg-secondary text-white smaller" id="popoverCategoryBadge">개인</span>
+      <span class="badge border smaller" id="popoverStatusBadge">TODO</span>
+    </div>
+    <button type="button" class="btn btn-sm btn-link text-muted p-0" onclick="closeScheduleDetailPopover()" title="닫기 (ESC)">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+  <div class="p-3">
+    <h6 class="fw-bold mb-2 text-dark" id="popoverTitle">일정 제목</h6>
+    <div class="small text-muted mb-2 d-flex align-items-center gap-1" id="popoverDueRow">
+      <i class="bi bi-calendar-event text-primary"></i>
+      <span id="popoverDueText">2026-11-24 18:00</span>
+    </div>
+    <div class="small text-secondary mb-3 p-2 bg-light rounded" id="popoverDescription" style="white-space: pre-wrap; max-height: 120px; overflow-y: auto;">
+      세부 내용
+    </div>
+    <div class="checklist-section" id="popoverChecklistSection">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="smaller fw-bold text-muted"><i class="bi bi-check2-square me-1"></i>세부 할 일 (체크리스트)</span>
+        <span class="smaller fw-bold text-primary" id="popoverProgressPercent">0%</span>
+      </div>
+      <div class="progress mb-2" style="height: 5px;">
+        <div id="popoverProgressBar" class="progress-bar bg-primary" style="width: 0%;"></div>
+      </div>
+      <ul class="list-unstyled smaller mb-0 p-0 d-flex flex-column gap-1" id="popoverSubtaskList" style="max-height: 130px; overflow-y: auto;"></ul>
+    </div>
+  </div>
 </div>
 
 <!-- 5. Quick Share to Team Modal -->
@@ -153,13 +192,16 @@
 <!-- STYLES FOR MINI TIMER & TEAM TOAST NOTIFICATIONS         -->
 <!-- ======================================================== -->
 <style>
-  /* Fixed Top-Right Mini Pomodoro Bar */
+  /* Top Mini Pomodoro Bar */
   .global-mini-timer-wrapper {
+    position: relative;
+    z-index: 1050;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
+  }
+  .global-mini-timer-wrapper.floating-fallback {
     position: fixed;
     top: 16px;
     right: 24px;
-    z-index: 1050;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
   }
 
   .mini-timer-bar {
@@ -237,6 +279,9 @@
 
   /* Expanded Card Mode */
   .mini-timer-card {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
     width: 280px;
     background: #FFFFFF;
     border: 1px solid #E6E6E4;
@@ -244,6 +289,7 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
     padding: 12px 14px;
     animation: fadeInSlideDown 0.2s ease-out;
+    z-index: 1060;
   }
 
   @keyframes fadeInSlideDown {
@@ -1222,12 +1268,14 @@
   // E. Notion-Style Context Menu Engine
   // ----------------------------------------------------
   let currentCtxSchedule = null;
+  let lastCtxPos = { clientX: 0, clientY: 0 };
 
   window.openScheduleContextMenu = function(e, schedData) {
     e.preventDefault();
     e.stopPropagation();
 
     currentCtxSchedule = schedData;
+    lastCtxPos = { clientX: e.clientX, clientY: e.clientY };
     const menu = document.getElementById('notionContextMenu');
     if (!menu) return;
 
@@ -1239,7 +1287,7 @@
     // Position Menu
     menu.style.display = 'block';
     const menuWidth = 190;
-    const menuHeight = 220;
+    const menuHeight = 260;
 
     let posX = e.clientX;
     let posY = e.clientY;
@@ -1260,20 +1308,143 @@
     if (menu) menu.style.display = 'none';
   }
 
+  // ----------------------------------------------------
+  // E-1. Lightweight Floating Popover for Schedule Details (first.md 5번)
+  // ----------------------------------------------------
+  window.openScheduleDetailPopover = function(schedData, pos) {
+    const pop = document.getElementById('scheduleDetailPopover');
+    if (!pop || !schedData) return;
+
+    let full = schedData;
+    if (typeof userSchedules !== 'undefined') {
+      const found = userSchedules.find(x => String(x.id) === String(schedData.id));
+      if (found) full = found;
+    } else if (typeof teamSchedules !== 'undefined') {
+      const found = teamSchedules.find(x => String(x.id) === String(schedData.id));
+      if (found) full = found;
+    } else if (window.teamSchedules) {
+      const found = window.teamSchedules.find(x => String(x.id) === String(schedData.id));
+      if (found) full = found;
+    }
+
+    const titleEl = document.getElementById('popoverTitle');
+    const catBadge = document.getElementById('popoverCategoryBadge');
+    const statusBadge = document.getElementById('popoverStatusBadge');
+    const dueText = document.getElementById('popoverDueText');
+    const descEl = document.getElementById('popoverDescription');
+    const percentEl = document.getElementById('popoverProgressPercent');
+    const barEl = document.getElementById('popoverProgressBar');
+    const listEl = document.getElementById('popoverSubtaskList');
+
+    if (titleEl) titleEl.textContent = full.title || '일정';
+    if (catBadge) {
+      catBadge.textContent = full.category || '개인';
+      catBadge.className = 'badge border smaller badge-cat-' + (full.category || '개인');
+    }
+    if (statusBadge) {
+      const statusMap = { 'TODO': '할 일', 'IN_PROGRESS': '진행 중', 'DONE': '완료', 'EXPIRED': '만료' };
+      statusBadge.textContent = statusMap[full.status] || full.status;
+      statusBadge.className = 'badge smaller border cal-status-' + (full.status || 'TODO');
+    }
+    if (dueText) {
+      dueText.textContent = full.due_datetime ? full.due_datetime : '기한 없음 (상시 일정)';
+    }
+    if (descEl) {
+      descEl.textContent = full.description ? full.description : '등록된 세부 메모가 없습니다.';
+    }
+
+    const subtasks = full.subtasks || [];
+    const total = subtasks.length;
+    const completed = subtasks.filter(st => st.is_done === 1 || st.is_done === true).length;
+    const percent = total > 0 ? Math.round((completed / total) * 100) : (full.status === 'DONE' ? 100 : 0);
+
+    if (percentEl) percentEl.textContent = `${completed}/${total} (${percent}%)`;
+    if (barEl) barEl.style.width = `${percent}%`;
+
+    if (listEl) {
+      listEl.innerHTML = '';
+      if (subtasks.length === 0) {
+        listEl.innerHTML = '<li class="text-muted smaller">등록된 세부 할 일이 없습니다.</li>';
+      } else {
+        subtasks.forEach(st => {
+          const li = document.createElement('li');
+          li.className = 'd-flex align-items-center gap-1 ' + (st.is_done ? 'text-decoration-line-through text-muted' : 'text-dark');
+          const checkIcon = st.is_done ? '<i class="bi bi-check-circle-fill text-success me-1"></i>' : '<i class="bi bi-circle text-secondary me-1"></i>';
+          li.innerHTML = `${checkIcon}<span class="text-truncate">${(st.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`;
+          listEl.appendChild(li);
+        });
+      }
+    }
+
+    pop.style.display = 'block';
+    const popWidth = 320;
+    const popHeight = pop.offsetHeight || 300;
+
+    let posX = (pos && pos.clientX !== undefined) ? pos.clientX + 10 : window.innerWidth / 2 - 160;
+    let posY = (pos && pos.clientY !== undefined) ? pos.clientY : 100;
+
+    if (posX + popWidth > window.innerWidth) {
+      posX = Math.max(10, (pos && pos.clientX !== undefined ? pos.clientX - popWidth - 10 : window.innerWidth - popWidth - 10));
+    }
+    if (posY + popHeight > window.innerHeight) {
+      posY = Math.max(10, window.innerHeight - popHeight - 10);
+    }
+
+    pop.style.left = posX + 'px';
+    pop.style.top = posY + 'px';
+  };
+
+  window.closeScheduleDetailPopover = function() {
+    const pop = document.getElementById('scheduleDetailPopover');
+    if (pop) pop.style.display = 'none';
+  };
+
   document.addEventListener('click', function(e) {
     if (!e.target.closest('#notionContextMenu')) {
       closeContextMenu();
+    }
+    if (!e.target.closest('#scheduleDetailPopover') && !e.target.closest('#ctxActionViewDetails')) {
+      closeScheduleDetailPopover();
     }
   });
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       closeContextMenu();
+      closeScheduleDetailPopover();
     }
   });
 
+  function mountMiniTimerToHeader() {
+    const slot = document.getElementById('headerMiniTimerSlot');
+    const timer = document.getElementById('globalMiniTimer');
+    if (timer) {
+      if (slot) {
+        slot.appendChild(timer);
+        timer.classList.remove('floating-fallback');
+      } else {
+        timer.classList.add('floating-fallback');
+      }
+    }
+  }
+  mountMiniTimerToHeader();
+
   // Context Menu Actions
   document.addEventListener('DOMContentLoaded', function() {
+    mountMiniTimerToHeader();
+
+    const viewDetailsBtn = document.getElementById('ctxActionViewDetails');
+    if (viewDetailsBtn) {
+      viewDetailsBtn.addEventListener('click', function() {
+        const sched = currentCtxSchedule;
+        const pos = { ...lastCtxPos };
+        closeContextMenu();
+        if (sched) {
+          window.openScheduleDetailPopover(sched, pos);
+        }
+      });
+    }
+
     const editBtn = document.getElementById('ctxActionEdit');
     if (editBtn) {
       editBtn.addEventListener('click', function() {
@@ -1303,8 +1474,9 @@
     }
 
     // Status Change in Context Menu (stastics.md 3번: 비동기 fetch 요청 및 캘린더 뷰 유지)
-    ['TODO', 'IN_PROGRESS', 'DONE'].forEach(st => {
-      const btn = document.getElementById('ctxStatus' + (st === 'IN_PROGRESS' ? 'InProgress' : (st === 'TODO' ? 'Todo' : 'Done')));
+    ['TODO', 'IN_PROGRESS', 'DONE', 'EXPIRED'].forEach(st => {
+      const idMap = { 'TODO': 'Todo', 'IN_PROGRESS': 'InProgress', 'DONE': 'Done', 'EXPIRED': 'Expired' };
+      const btn = document.getElementById('ctxStatus' + idMap[st]);
       if (btn) {
         btn.addEventListener('click', function() {
           closeContextMenu();

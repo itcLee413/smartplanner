@@ -96,15 +96,15 @@
           </span>
         </div>
         <div class="d-flex align-items-center gap-2">
+          <div id="headerMiniTimerSlot" class="d-flex align-items-center"></div>
+          <%- include('partials/notification-dropdown') %>
           <% if (currentTeam && myMembership && (myMembership.role === 'LEADER' || myMembership.role === 'MANAGER')) { %>
             <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#teamAuditLogModal" title="팀 일정 수정 로그 (Audit Log)">
               <i class="bi bi-clock-history me-1"></i> 수정 로그
             </button>
           <% } %>
-          <span class="badge bg-light text-dark border px-2 py-1 fw-normal">
-            <i class="bi bi-person-fill text-primary me-1"></i>
-            <strong><%= user.name %></strong> (<%= user.username %>)
-          </span>
+          <!-- Realtime 24h Clock (third.md 1번) -->
+          <%- include('partials/header-clock') %>
         </div>
       </header>
 
@@ -230,6 +230,10 @@
                       <i class="bi bi-gear-fill me-1"></i>팀 설정
                     </button>
                   <% } %>
+                  <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 fw-semibold" onclick="handleLeaveTeam('<%= currentTeam.id %>', '<%= currentTeam.name %>')" title="팀 나가기 (탈퇴)">
+                    <i class="bi bi-box-arrow-right me-1"></i>팀 나가기
+                  </button>
+                  <form id="leaveTeamForm" action="/teams/<%= currentTeam.id %>/leave" method="POST" class="d-none"></form>
                 </div>
                 <p class="text-muted small mb-2 preserve-lines"><%= currentTeam.description || '팀 설명이 등록되지 않았습니다.' %></p>
                 <div class="d-flex align-items-center gap-3 small text-muted flex-wrap">
@@ -283,12 +287,26 @@
               
               <!-- 1) 팀 공유 일정 보드 -->
               <div class="card card-custom mb-4">
-                <div class="card-header-custom">
+                <div class="card-header-custom d-flex flex-wrap align-items-center justify-content-between gap-2">
                   <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-calendar-check text-primary fs-5"></i>
                     <span class="fs-6 fw-bold">팀 공유 일정 보드</span>
                     <span class="badge bg-primary-subtle text-primary rounded-pill"><%= schedules.length %>개</span>
                   </div>
+
+                  <!-- 뷰 전환 탭 ([칸반 뷰] / [팀 캘린더 뷰] second.md 1번) -->
+                  <ul class="nav nav-pills nav-pills-sm card-header-pills" id="teamScheduleViewTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link active py-1 px-3 small fw-semibold" id="tab-team-kanban-btn" data-bs-toggle="pill" data-bs-target="#team-kanban-view" type="button" role="tab">
+                        <i class="bi bi-kanban me-1"></i>칸반 뷰
+                      </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link py-1 px-3 small fw-semibold" id="tab-team-calendar-btn" data-bs-toggle="pill" data-bs-target="#team-calendar-view" type="button" role="tab" onclick="renderTeamCalendar()">
+                        <i class="bi bi-calendar3 me-1"></i>팀 캘린더 뷰
+                      </button>
+                    </li>
+                  </ul>
 
                   <div class="d-flex align-items-center gap-1">
                     <% if (myMembership.role === 'LEADER' || myMembership.role === 'MANAGER') { %>
@@ -337,85 +355,138 @@
                   </div>
                 <% } %>
 
-                <!-- 팀 일정 리스트 -->
+                <!-- 탭 컨텐츠 영역 -->
                 <div class="card-body p-3">
-                  <% if (schedules.length === 0) { %>
-                    <div class="text-center py-4 text-muted">
-                      <i class="bi bi-calendar-x fs-2 opacity-50 mb-1 d-block"></i>
-                      <p class="small mb-0">등록된 팀 공유 일정이 없습니다.</p>
-                      <% if (myMembership.role === 'LEADER' || myMembership.role === 'MANAGER') { %>
-                        <p class="smaller text-secondary">상단의 [+ 일정 등록] 버튼을 눌러 새 팀 일정을 추가해 보세요.</p>
-                      <% } %>
-                    </div>
-                  <% } else { %>
-                    <div class="d-flex flex-column gap-2">
-                      <% schedules.forEach(sched => { %>
-                        <div class="team-schedule-item <%= sched.status === 'DONE' ? 'status-done' : '' %>">
-                          <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
-                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                              <span class="fw-bold text-dark fs-6 <%= sched.status === 'DONE' ? 'text-decoration-line-through text-muted' : '' %>">
-                                <%= sched.title %>
-                              </span>
-                              <span class="badge bg-light text-secondary border small">
-                                <i class="bi bi-person me-1"></i><%= sched.author_name %> (<%= sched.author_position || '팀원' %>)
-                              </span>
-                            </div>
-
-                            <div class="d-flex align-items-center gap-1">
-                              <!-- 상태 변경 드롭다운 (MEMBER 포함 모든 팀원 변경 가능) -->
-                              <form action="/teams/<%= currentTeam.id %>/schedules/<%= sched.id %>/status" method="POST" class="d-inline m-0">
-                                <select name="status" class="form-select form-select-sm py-0 ps-2 pe-4" onchange="this.form.submit()" style="font-size: 0.78rem;">
-                                  <option value="TODO" <%= sched.status === 'TODO' ? 'selected' : '' %>>대기 (TODO)</option>
-                                  <option value="IN_PROGRESS" <%= sched.status === 'IN_PROGRESS' ? 'selected' : '' %>>진행 중 (IN_PROGRESS)</option>
-                                  <option value="DONE" <%= sched.status === 'DONE' ? 'selected' : '' %>>완료 (DONE)</option>
-                                </select>
-                              </form>
-
-                              <!-- 수정 버튼 (LEADER/MANAGER 또는 본인 작성자) -->
-                              <% if (myMembership.role === 'LEADER' || myMembership.role === 'MANAGER' || sched.author_id === user.id) { %>
-                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" data-bs-toggle="modal" data-bs-target="#editTeamScheduleModal<%= sched.id %>" title="일정 수정">
-                                  <i class="bi bi-pencil"></i>
-                                </button>
-                              <% } %>
-
-                              <!-- 삭제 버튼 (LEADER/MANAGER 또는 본인 작성자) -->
-                              <% if (myMembership.role === 'LEADER' || myMembership.role === 'MANAGER' || sched.author_id === user.id) { %>
-                                <form action="/teams/<%= currentTeam.id %>/schedules/<%= sched.id %>/delete" method="POST" class="d-inline m-0" onsubmit="return confirm('이 팀 일정을 삭제하시겠습니까?');">
-                                  <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2" title="일정 삭제">
-                                    <i class="bi bi-trash"></i>
-                                  </button>
-                                </form>
-                              <% } %>
-                            </div>
-                          </div>
-
-                          <div class="small text-muted mb-2">
-                            <% if (sched.due_datetime) { %>
-                              <i class="bi bi-clock me-1 text-primary"></i>마감: <strong><%= sched.due_datetime %></strong>
-                            <% } else { %>
-                              <span class="badge bg-secondary text-white"><i class="bi bi-infinity me-1"></i>상시 일정</span>
-                            <% } %>
-                          </div>
-
-                          <% if (sched.linked_notes && sched.linked_notes.length > 0) { %>
-                            <div class="mb-2 d-flex flex-wrap gap-1">
-                              <% sched.linked_notes.forEach(note => { %>
-                                <a href="/notes?noteId=<%= note.id %>" class="badge bg-white text-primary border text-decoration-none d-inline-flex align-items-center gap-1" title="연결된 문서: <%= note.title %>">
-                                  <i class="bi bi-file-earmark-text"></i> <%= note.title %>
-                                </a>
-                              <% }) %>
-                            </div>
-                          <% } %>
-
-                          <% if (sched.description && sched.description.trim()) { %>
-                            <div class="p-2 bg-light rounded small preserve-lines text-secondary">
-                              <%= sched.description.trim() %>
-                            </div>
+                  <div class="tab-content" id="teamScheduleTabContent">
+                    <!-- 1. 칸반/목록 뷰 -->
+                    <div class="tab-pane fade show active" id="team-kanban-view" role="tabpanel">
+                      <% if (schedules.length === 0) { %>
+                        <div class="text-center py-4 text-muted">
+                          <i class="bi bi-calendar-x fs-2 opacity-50 mb-1 d-block"></i>
+                          <p class="small mb-0">등록된 팀 공유 일정이 없습니다.</p>
+                          <% if (myMembership.role === 'LEADER' || myMembership.role === 'MANAGER') { %>
+                            <p class="smaller text-secondary">상단의 [+ 일정 등록] 버튼을 눌러 새 팀 일정을 추가해 보세요.</p>
                           <% } %>
                         </div>
-                      <% }); %>
+                      <% } else { %>
+                        <div class="d-flex flex-column gap-2">
+                          <% schedules.forEach(sched => { %>
+                            <div class="team-schedule-item <%= sched.status === 'DONE' ? 'status-done' : '' %>"
+                                 oncontextmenu="openTeamScheduleContextMenu(event, '<%= sched.id %>')">
+                              <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                  <span class="fw-bold text-dark fs-6 <%= sched.status === 'DONE' ? 'text-decoration-line-through text-muted' : '' %>">
+                                    <%= sched.title %>
+                                  </span>
+                                  <span class="badge bg-light text-secondary border small">
+                                    <i class="bi bi-person me-1"></i><%= sched.author_name %> (<%= sched.author_position || '팀원' %>)
+                                  </span>
+                                </div>
+
+                                <div class="d-flex align-items-center gap-1">
+                                  <!-- 상태 변경 드롭다운 (MEMBER 포함 모든 팀원 변경 가능) -->
+                                  <form action="/teams/<%= currentTeam.id %>/schedules/<%= sched.id %>/status" method="POST" class="d-inline m-0">
+                                    <select name="status" class="form-select form-select-sm py-0 ps-2 pe-4" onchange="this.form.submit()" style="font-size: 0.78rem;">
+                                      <option value="TODO" <%= sched.status === 'TODO' ? 'selected' : '' %>>대기 (TODO)</option>
+                                      <option value="IN_PROGRESS" <%= sched.status === 'IN_PROGRESS' ? 'selected' : '' %>>진행 중 (IN_PROGRESS)</option>
+                                      <option value="DONE" <%= sched.status === 'DONE' ? 'selected' : '' %>>완료 (DONE)</option>
+                                    </select>
+                                  </form>
+
+                                  <!-- 수정 버튼 (LEADER/MANAGER 또는 본인 작성자) -->
+                                  <% if (myMembership.role === 'LEADER' || myMembership.role === 'MANAGER' || sched.author_id === user.id) { %>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" data-bs-toggle="modal" data-bs-target="#editTeamScheduleModal<%= sched.id %>" title="일정 수정">
+                                      <i class="bi bi-pencil"></i>
+                                    </button>
+                                  <% } %>
+
+                                  <!-- 삭제 버튼 (LEADER/MANAGER 또는 본인 작성자) -->
+                                  <% if (myMembership.role === 'LEADER' || myMembership.role === 'MANAGER' || sched.author_id === user.id) { %>
+                                    <form action="/teams/<%= currentTeam.id %>/schedules/<%= sched.id %>/delete" method="POST" class="d-inline m-0" onsubmit="return confirm('이 팀 일정을 삭제하시겠습니까?');">
+                                      <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2" title="일정 삭제">
+                                        <i class="bi bi-trash"></i>
+                                      </button>
+                                    </form>
+                                  <% } %>
+                                </div>
+                              </div>
+
+                              <div class="small text-muted mb-2">
+                                <% if (sched.due_datetime) { %>
+                                  <i class="bi bi-clock me-1 text-primary"></i>마감: <strong><%= sched.due_datetime %></strong>
+                                <% } else { %>
+                                  <span class="badge bg-secondary text-white"><i class="bi bi-infinity me-1"></i>상시 일정</span>
+                                <% } %>
+                              </div>
+
+                              <% if (sched.linked_notes && sched.linked_notes.length > 0) { %>
+                                <div class="mb-2 d-flex flex-wrap gap-1">
+                                  <% sched.linked_notes.forEach(note => { %>
+                                    <a href="/notes?noteId=<%= note.id %>" class="badge bg-white text-primary border text-decoration-none d-inline-flex align-items-center gap-1" title="연결된 문서: <%= note.title %>">
+                                      <i class="bi bi-file-earmark-text"></i> <%= note.title %>
+                                    </a>
+                                  <% }) %>
+                                </div>
+                              <% } %>
+
+                              <% if (sched.description && sched.description.trim()) { %>
+                                <div class="p-2 bg-light rounded small preserve-lines text-secondary">
+                                  <%= sched.description.trim() %>
+                                </div>
+                              <% } %>
+                            </div>
+                          <% }); %>
+                        </div>
+                      <% } %>
                     </div>
-                  <% } %>
+
+                    <!-- 2. 팀 캘린더 뷰 (second.md 1번) -->
+                    <div class="tab-pane fade" id="team-calendar-view" role="tabpanel">
+                      <!-- Calendar Month Navigation -->
+                      <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="prevTeamCalMonth()"><i class="bi bi-chevron-left"></i></button>
+                          <h6 class="fw-bold mb-0 text-dark fs-6" id="teamCalMonthYearTitle">2026년 11월</h6>
+                          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="nextTeamCalMonth()"><i class="bi bi-chevron-right"></i></button>
+                          <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="todayTeamCalMonth()">오늘</button>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 small">
+                          <span class="badge cal-status-TODO border">대기 (TODO)</span>
+                          <span class="badge cal-status-IN_PROGRESS border">진행 중 (IN_PROGRESS)</span>
+                          <span class="badge cal-status-DONE border">완료 (DONE)</span>
+                        </div>
+                      </div>
+
+                      <!-- 요일 헤더 (일 ~ 토) -->
+                      <div class="d-grid text-center small fw-bold text-secondary mb-1" style="grid-template-columns: repeat(7, 1fr);">
+                        <div class="text-danger py-1">일</div>
+                        <div class="py-1">월</div>
+                        <div class="py-1">화</div>
+                        <div class="py-1">수</div>
+                        <div class="py-1">목</div>
+                        <div class="py-1">금</div>
+                        <div class="text-primary py-1">토</div>
+                      </div>
+
+                      <!-- 7열 월간 캘린더 그리드 -->
+                      <div class="calendar-grid mt-0" id="teamCalendarCellsContainer"></div>
+
+                      <!-- 기한 미지정 팀 일정 보관함 (양방향 드롭존) -->
+                      <div class="card mt-3" id="teamUndatedDropzone" ondragover="allowTeamDrop(event)" ondrop="handleTeamUndatedDrop(event)" style="border: 2px dashed #CBD5E1; background-color: #F8FAFC;">
+                        <div class="card-body p-2">
+                          <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="small fw-bold text-secondary">
+                              <i class="bi bi-inbox me-1"></i>기한 미지정 팀 일정 (상시 일정 드롭존)
+                            </span>
+                            <span class="badge bg-secondary rounded-pill" id="teamUndatedCount">0개</span>
+                          </div>
+                          <div class="d-flex flex-wrap gap-1 min-h-30" id="teamUndatedListContainer">
+                            <!-- 자바스크립트로 동적 렌더링 -->
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -529,12 +600,15 @@
             <!-- ======================================================== -->
             <div class="col-lg-5">
               <div class="card card-custom sticky-top" style="top: 80px;">
-                <div class="card-header-custom">
+                <div class="card-header-custom d-flex align-items-center justify-content-between">
                   <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-people-fill text-primary fs-5"></i>
                     <span class="fs-6 fw-bold">팀원 및 직책·권한 관리</span>
+                    <span class="badge bg-light text-secondary border"><%= members.length %>명</span>
                   </div>
-                  <span class="badge bg-light text-secondary border"><%= members.length %>명</span>
+                  <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#inviteUserModal" title="@아이디로 팀원 초대">
+                    <i class="bi bi-person-plus-fill me-1"></i>@초대
+                  </button>
                 </div>
 
                 <div class="card-body p-0">
@@ -906,8 +980,59 @@
     </div>
   <% } %>
 
+  <!-- Modal: @아이디로 팀원 초대 (second.md 3번) -->
+  <div class="modal fade" id="inviteUserModal" tabindex="-1" aria-labelledby="inviteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <form action="/teams/<%= currentTeam ? currentTeam.id : '' %>/invite" method="POST">
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold" id="inviteUserModalLabel">
+              <i class="bi bi-person-plus-fill text-primary me-2"></i>@아이디로 팀원 초대
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body p-4">
+            <p class="text-secondary small mb-3">
+              초대하려는 사용자의 아이디를 <code>@아이디</code> 형식(또는 아이디만)으로 입력해 주세요.<br>
+              초대장이 발송되면 해당 사용자 상단 헤더의 <strong>종 모양 알림함</strong>에 즉시 도착합니다.
+            </p>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold text-secondary">사용자 아이디 (Username) *</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light fw-bold text-secondary">@</span>
+                <input type="text" name="username" class="form-control" placeholder="예: test" required autofocus autocomplete="off">
+              </div>
+              <div class="form-text smaller text-muted">@ 기호는 자동으로 처리됩니다.</div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">취소</button>
+            <button type="submit" class="btn btn-primary btn-sm fw-semibold">
+              <i class="bi bi-send-fill me-1"></i>초대장 발송
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    async function handleLeaveTeam(teamId, teamName) {
+      let ok = false;
+      const msg = `"${teamName}" 팀에서 정말 나가시겠습니까?\n\n※ 팀장(LEADER)이 탈퇴할 경우 가장 먼저 가입한 팀원에게 팀장 권한이 자동 위임되며, 마지막 남은 1인이면 팀과 관련 데이터가 모두 삭제됩니다.`;
+      if (typeof showConfirm === 'function') {
+        ok = await showConfirm(msg, '팀 나가기 확인');
+      } else {
+        ok = confirm(msg);
+      }
+      if (ok) {
+        const form = document.getElementById('leaveTeamForm');
+        if (form) form.submit();
+      }
+    }
+    window.handleLeaveTeam = handleLeaveTeam;
+
     function toggleDueInput(checkbox, inputId) {
       const input = document.getElementById(inputId);
       if (!input) return;
@@ -1021,6 +1146,282 @@
         if (targetBtn) targetBtn.disabled = false;
       });
     };
+
+    // ==========================================
+    // Team Schedule Calendar Logic (second.md 1번)
+    // ==========================================
+    window.teamSchedules = <%- JSON.stringify(schedules || []) %>;
+    window.currentTeamId = <%= currentTeam ? currentTeam.id : 'null' %>;
+
+    let currentTeamCalYear = new Date().getFullYear();
+    let currentTeamCalMonth = new Date().getMonth(); // 0-indexed
+
+    function prevTeamCalMonth() {
+      currentTeamCalMonth--;
+      if (currentTeamCalMonth < 0) {
+        currentTeamCalMonth = 11;
+        currentTeamCalYear--;
+      }
+      renderTeamCalendar();
+    }
+    window.prevTeamCalMonth = prevTeamCalMonth;
+
+    function nextTeamCalMonth() {
+      currentTeamCalMonth++;
+      if (currentTeamCalMonth > 11) {
+        currentTeamCalMonth = 0;
+        currentTeamCalYear++;
+      }
+      renderTeamCalendar();
+    }
+    window.nextTeamCalMonth = nextTeamCalMonth;
+
+    function todayTeamCalMonth() {
+      const now = new Date();
+      currentTeamCalYear = now.getFullYear();
+      currentTeamCalMonth = now.getMonth();
+      renderTeamCalendar();
+    }
+    window.todayTeamCalMonth = todayTeamCalMonth;
+
+    function renderTeamCalendar() {
+      const container = document.getElementById('teamCalendarCellsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const titleEl = document.getElementById('teamCalMonthYearTitle');
+      if (titleEl) {
+        titleEl.textContent = `${currentTeamCalYear}년 ${currentTeamCalMonth + 1}월`;
+      }
+
+      const firstDay = new Date(currentTeamCalYear, currentTeamCalMonth, 1).getDay();
+      const lastDate = new Date(currentTeamCalYear, currentTeamCalMonth + 1, 0).getDate();
+      const prevLastDate = new Date(currentTeamCalYear, currentTeamCalMonth, 0).getDate();
+
+      const today = new Date();
+      const todayYear = today.getFullYear();
+      const todayMonth = today.getMonth();
+      const todayDate = today.getDate();
+
+      // 1. Previous month trailing days
+      for (let i = firstDay - 1; i >= 0; i--) {
+        const d = prevLastDate - i;
+        const cell = document.createElement('div');
+        cell.className = 'calendar-cell other-month';
+        cell.innerHTML = `<div class="d-flex justify-content-between mb-1"><span class="day-number text-muted">${d}</span></div>`;
+        container.appendChild(cell);
+      }
+
+      // 2. Current month days
+      const pad = n => String(n).padStart(2, '0');
+      for (let d = 1; d <= lastDate; d++) {
+        const dateStr = `${currentTeamCalYear}-${pad(currentTeamCalMonth + 1)}-${pad(d)}`;
+        const isToday = (currentTeamCalYear === todayYear && currentTeamCalMonth === todayMonth && d === todayDate);
+
+        const cell = document.createElement('div');
+        cell.className = 'calendar-cell' + (isToday ? ' today' : '');
+        cell.dataset.date = dateStr;
+
+        // Dragover & Drop
+        cell.ondragover = function(ev) {
+          ev.preventDefault();
+          ev.dataTransfer.dropEffect = 'move';
+          cell.classList.add('bg-primary-subtle');
+        };
+        cell.ondragleave = function() {
+          cell.classList.remove('bg-primary-subtle');
+        };
+        cell.ondrop = function(ev) {
+          cell.classList.remove('bg-primary-subtle');
+          handleTeamCalendarCellDrop(ev, dateStr);
+        };
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'd-flex justify-content-between align-items-center mb-1';
+        headerDiv.innerHTML = `<span class="day-number ${isToday ? 'fw-bold text-primary' : ''}">${d}</span>`;
+        cell.appendChild(headerDiv);
+
+        const eventsContainer = document.createElement('div');
+        eventsContainer.className = 'calendar-events d-flex flex-column gap-1';
+
+        // Filter schedules for this date
+        const dayScheds = (window.teamSchedules || []).filter(s => s.due_datetime && s.due_datetime.startsWith(dateStr));
+        dayScheds.forEach(s => {
+          const badge = document.createElement('div');
+          badge.className = `calendar-event-badge cal-status-${s.status}`;
+          badge.setAttribute('draggable', 'true');
+          badge.title = `${s.title} (${s.author_name} - ${s.status})`;
+          badge.innerHTML = `<span class="badge-title text-truncate">${escapeHtml(s.title)}</span>`;
+
+          badge.ondragstart = function(ev) {
+            ev.dataTransfer.setData('text/plain', JSON.stringify({ id: s.id, type: 'TEAM', teamId: window.currentTeamId }));
+            ev.dataTransfer.effectAllowed = 'move';
+          };
+
+          badge.oncontextmenu = function(ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            if (typeof openScheduleContextMenu === 'function') {
+              openScheduleContextMenu(ev, { ...s, team_id: window.currentTeamId });
+            }
+          };
+
+          badge.onclick = function(ev) {
+            ev.stopPropagation();
+            if (typeof openScheduleDetailPopover === 'function') {
+              openScheduleDetailPopover(s, { clientX: ev.clientX, clientY: ev.clientY });
+            }
+          };
+
+          eventsContainer.appendChild(badge);
+        });
+
+        cell.appendChild(eventsContainer);
+        container.appendChild(cell);
+      }
+
+      // 3. Next month leading days
+      const totalCells = firstDay + lastDate;
+      const remaining = (7 - (totalCells % 7)) % 7;
+      for (let i = 1; i <= remaining; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-cell other-month';
+        cell.innerHTML = `<div class="d-flex justify-content-between mb-1"><span class="day-number text-muted">${i}</span></div>`;
+        container.appendChild(cell);
+      }
+
+      // Render undated schedules
+      renderTeamUndatedSchedules();
+    }
+    window.renderTeamCalendar = renderTeamCalendar;
+
+    function renderTeamUndatedSchedules() {
+      const container = document.getElementById('teamUndatedListContainer');
+      const countEl = document.getElementById('teamUndatedCount');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const undated = (window.teamSchedules || []).filter(s => !s.due_datetime || s.due_datetime === '');
+      if (countEl) countEl.textContent = `${undated.length}개`;
+
+      if (undated.length === 0) {
+        container.innerHTML = '<span class="text-muted smaller p-1">기한 미지정 일정이 없습니다. 일정을 드래그하여 상시 일정으로 전환할 수 있습니다.</span>';
+        return;
+      }
+
+      undated.forEach(s => {
+        const badge = document.createElement('div');
+        badge.className = `calendar-event-badge cal-status-${s.status} cursor-pointer`;
+        badge.setAttribute('draggable', 'true');
+        badge.style.display = 'inline-block';
+        badge.style.maxWidth = '200px';
+        badge.title = `${s.title} (상시 일정)`;
+        badge.innerHTML = `<i class="bi bi-infinity me-1"></i><span class="badge-title text-truncate">${escapeHtml(s.title)}</span>`;
+
+        badge.ondragstart = function(ev) {
+          ev.dataTransfer.setData('text/plain', JSON.stringify({ id: s.id, type: 'TEAM', teamId: window.currentTeamId }));
+          ev.dataTransfer.effectAllowed = 'move';
+        };
+
+        badge.oncontextmenu = function(ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          if (typeof openScheduleContextMenu === 'function') {
+            openScheduleContextMenu(ev, { ...s, team_id: window.currentTeamId });
+          }
+        };
+
+        badge.onclick = function(ev) {
+          ev.stopPropagation();
+          if (typeof openScheduleDetailPopover === 'function') {
+            openScheduleDetailPopover(s, { clientX: ev.clientX, clientY: ev.clientY });
+          }
+        };
+
+        container.appendChild(badge);
+      });
+    }
+
+    function allowTeamDrop(ev) {
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'move';
+    }
+    window.allowTeamDrop = allowTeamDrop;
+
+    async function handleTeamCalendarCellDrop(ev, targetDateStr) {
+      ev.preventDefault();
+      const raw = ev.dataTransfer.getData('text/plain');
+      if (!raw) return;
+      try {
+        const data = JSON.parse(raw);
+        const schedId = data.id;
+        const target = (window.teamSchedules || []).find(x => String(x.id) === String(schedId));
+        if (!target) return;
+
+        const newDue = `${targetDateStr} 18:00`;
+        const res = await fetch(`/teams/${window.currentTeamId}/schedules/${schedId}/update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            due_datetime: newDue,
+            title: target.title,
+            status: target.status
+          })
+        });
+        const result = await res.json();
+        if (result && result.success) {
+          target.due_datetime = newDue;
+          renderTeamCalendar();
+          if (typeof showAlert === 'function') showAlert(`팀 일정 마감일이 ${targetDateStr}로 변경되었습니다.`);
+        } else {
+          if (typeof showAlert === 'function') showAlert((result && result.error) || '일정 이동 실패');
+          else alert((result && result.error) || '일정 이동 실패');
+        }
+      } catch (e) {
+        console.error('Team cal drop error:', e);
+      }
+    }
+    window.handleTeamCalendarCellDrop = handleTeamCalendarCellDrop;
+
+    async function handleTeamUndatedDrop(ev) {
+      ev.preventDefault();
+      const raw = ev.dataTransfer.getData('text/plain');
+      if (!raw) return;
+      try {
+        const data = JSON.parse(raw);
+        const schedId = data.id;
+        const target = (window.teamSchedules || []).find(x => String(x.id) === String(schedId));
+        if (!target) return;
+
+        const res = await fetch(`/teams/${window.currentTeamId}/schedules/${schedId}/update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            no_deadline: true,
+            due_datetime: '',
+            title: target.title,
+            status: target.status
+          })
+        });
+        const result = await res.json();
+        if (result && result.success) {
+          target.due_datetime = null;
+          renderTeamCalendar();
+          if (typeof showAlert === 'function') showAlert(`팀 일정이 [기한 미지정(상시)] 상태로 변경되었습니다.`);
+        } else {
+          if (typeof showAlert === 'function') showAlert((result && result.error) || '일정 이동 실패');
+          else alert((result && result.error) || '일정 이동 실패');
+        }
+      } catch (e) {
+        console.error('Team undated drop error:', e);
+      }
+    }
+    window.handleTeamUndatedDrop = handleTeamUndatedDrop;
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
   </script>
   <%- include('partials/mini-timer') %>
 </body>

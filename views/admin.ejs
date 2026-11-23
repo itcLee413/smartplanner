@@ -96,10 +96,10 @@
           </span>
         </div>
         <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-danger text-white px-2 py-1 fw-normal">
-            <i class="bi bi-shield-shaded me-1"></i>
-            <strong>ADMIN</strong> (<%= user.username %>)
-          </span>
+          <div id="headerMiniTimerSlot" class="d-flex align-items-center"></div>
+          <%- include('partials/notification-dropdown') %>
+          <!-- Realtime 24h Clock (third.md 1번) -->
+          <%- include('partials/header-clock') %>
         </div>
       </header>
 
@@ -266,7 +266,7 @@
               </div>
               <div class="card-body p-4">
                 <p class="small text-secondary mb-3">
-                  텔레그램을 연동한 모든 회원(<%= kpis.connectedTelegramUsers %>명)에게 실시간 스마트 비서 알림으로 공지사항을 일괄 발송합니다.
+                  텔레그램을 연동한 모든 회원(<%= kpis.connectedTelegramUsers %>명)에게 실시간 텔레그램 알림으로 공지사항을 일괄 발송합니다.
                 </p>
                 <form action="/admin/broadcast" method="POST">
                   <div class="mb-3">
