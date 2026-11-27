@@ -3,3 +3,6 @@ node_modules/
 *.sqlite-wal
 *.sqlite-shm
 *.md
+.env
+*.md
+!README.md
